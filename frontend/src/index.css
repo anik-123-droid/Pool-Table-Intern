@@ -1,0 +1,521 @@
+/* Fonts are loaded in index.html */
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #FFFFFF;
+  --color-surface-container: #FAFAFA;
+  --color-surface-container-low: #F5F5F5;
+  --color-surface-container-high: #E5E5E5;
+  --color-surface-container-highest: #D4D4D4;
+  --color-on-surface: #171717;
+  --color-on-surface-variant: #525252;
+  --color-primary: #166534; /* Pool Table Felt Green */
+  --color-primary-container: #166534;
+  --color-on-primary-container: #ffffff;
+  --color-secondary: #92400e; /* Mahogany Wood */
+  --color-secondary-container: #92400e;
+  --color-background: #F9F8F6; /* Light ivory/chalk */
+  --color-outline-variant: #D4D4D4;
+  --color-error: #991B1B;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 12px;
+  --spacing-md: 24px;
+  --spacing-lg: 40px;
+  --spacing-xl: 64px;
+  --spacing-gutter: 16px;
+
+  --font-h1: "Playfair Display", serif;
+  --font-h2: "Playfair Display", serif;
+  --font-h3: "Playfair Display", serif;
+  --font-body: "Outfit", sans-serif;
+  --font-body-lg: "Outfit", sans-serif;
+  --font-body-md: "Outfit", sans-serif;
+  --font-body-sm: "Outfit", sans-serif;
+  --font-caption: "Outfit", sans-serif;
+  --font-label-caps: "Playfair Display", serif;
+}
+
+/* ===== CUSTOM SCROLLBAR (Light Theme) ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(22, 101, 52, 0.15);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(22, 101, 52, 0.3);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(22, 101, 52, 0.15) transparent;
+}
+
+/* ===== GLOBAL KEYFRAMES ===== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes borderGlow {
+  0%, 100% { border-color: rgba(22, 101, 52, 0.15); }
+  50% { border-color: rgba(22, 101, 52, 0.4); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(22, 101, 52, 0.2); }
+  50% { box-shadow: 0 0 24px rgba(22, 101, 52, 0.5); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes neonPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: -468px 0; }
+  100% { background-position: 468px 0; }
+}
+
+@keyframes rotateGradient {
+  0% { --gradient-angle: 0deg; }
+  100% { --gradient-angle: 360deg; }
+}
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes shimmerSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes confettiFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+  50% { transform: translateY(-8px) rotate(180deg); opacity: 1; }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface min-h-screen overflow-x-hidden font-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-h1 tracking-tighter;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  /* Clean focus states */
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* Fix Chrome/Edge/Safari autofill blue background */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: inherit;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* Smooth page transitions */
+  main {
+    animation: fadeIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  /* Selection color */
+  ::selection {
+    background: rgba(22, 101, 52, 0.3);
+    color: #fff;
+  }
+}
+
+@layer utilities {
+  .italic {
+    font-style: normal !important;
+  }
+  
+  .text-3xl { font-size: 1.25rem !important; line-height: 1.75rem !important; }
+  .text-4xl { font-size: 1.5rem !important; line-height: 2rem !important; }
+  .text-5xl { font-size: 1.875rem !important; line-height: 2.25rem !important; }
+  .text-6xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
+
+  /* ===== ENHANCED GLASS CARD ===== */
+  .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(250, 250, 250, 0.95) 100%);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 
+      0 8px 32px 0 rgba(0, 0, 0, 0.05),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
+    transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+  }
+  .glass-card:hover {
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 
+      0 12px 48px 0 rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* ===== NEON SHADOWS — CLEAN ===== */
+  .neon-shadow-purple {
+    box-shadow: 0 4px 12px rgba(22, 101, 52, 0.15);
+  }
+
+  .neon-shadow-pink {
+    box-shadow: 0 4px 12px rgba(21, 128, 61, 0.15);
+  }
+
+  .neon-shadow-blue {
+    box-shadow: 0 4px 12px rgba(22, 101, 52, 0.15);
+  }
+  /* ===== BUTTON SHIMMER EFFECT (CLEAN) ===== */
+  .btn-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-shimmer::after {
+    display: none;
+  }
+
+  /* ===== GRADIENT TEXT ===== */
+  .gradient-text-neon {
+    background: linear-gradient(135deg, #166534 0%, #15803d 50%, #166534 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 4s ease infinite;
+  }
+
+  .gradient-text-gold {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 3s ease infinite;
+  }
+
+  /* ===== SHIMMER BORDER ===== */
+  .shimmer-border {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-border::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(22, 101, 52, 0.5), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  /* ===== ANIMATED BORDER GLOW ===== */
+  .animate-border-glow {
+    animation: borderGlow 3s ease-in-out infinite;
+  }
+
+  /* ===== PULSE GLOW (for CTAs) ===== */
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  /* ===== FLOAT ANIMATION ===== */
+  .animate-float {
+    animation: floatSlow 4s ease-in-out infinite;
+  }
+
+  /* ===== STAGGERED ENTRANCE ===== */
+  .animate-enter {
+    animation: fadeInUp 0.5s ease-out both;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out both;
+  }
+  .animate-enter-delay-1 { animation-delay: 0.1s; }
+  .animate-enter-delay-2 { animation-delay: 0.2s; }
+  .animate-enter-delay-3 { animation-delay: 0.3s; }
+  .animate-enter-delay-4 { animation-delay: 0.4s; }
+  .animate-enter-delay-5 { animation-delay: 0.5s; }
+
+  .animate-slide-left {
+    animation: slideInLeft 0.5s ease-out both;
+  }
+  .animate-slide-right {
+    animation: slideInRight 0.5s ease-out both;
+  }
+
+  /* ===== LOADING SKELETON ===== */
+  .skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+    background-size: 468px 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+    border-radius: 8px;
+  }
+
+  /* ===== BUTTON PRESS MICRO-INTERACTION ===== */
+  .btn-press {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-press:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+  }
+  .btn-press:active {
+    transform: scale(0.97) translateY(0px);
+    filter: brightness(0.95);
+  }
+
+  /* ===== TABLE ROW HOVER ACCENT ===== */
+  .table-row-hover {
+    transition: all 0.25s ease;
+  }
+  .table-row-hover td:first-child {
+    position: relative;
+  }
+  .table-row-hover td:first-child::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleY(0);
+    width: 3px;
+    height: 60%;
+    background: linear-gradient(180deg, #166534, #15803d);
+    border-radius: 0 4px 4px 0;
+    transition: transform 0.25s ease;
+  }
+  .table-row-hover:hover td:first-child::before {
+    transform: translateY(-50%) scaleY(1);
+  }
+  .table-row-hover:hover td {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  /* ===== NOTIFICATION BADGE PULSE ===== */
+  .badge-pulse {
+    position: relative;
+  }
+  .badge-pulse::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 0;
+    animation: neonPulse 2s ease-in-out infinite;
+    z-index: -1;
+    filter: blur(4px);
+  }
+
+  /* ===== CARD LIFT ON HOVER ===== */
+  .card-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ===== GLOW ICON CONTAINER ===== */
+  .icon-glow {
+    position: relative;
+  }
+  .icon-glow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    opacity: 0;
+    filter: blur(12px);
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+  .icon-glow:hover::after {
+    opacity: 0.5;
+  }
+
+  /* ===== GRADIENT DIVIDER LINE ===== */
+  .gradient-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(22, 101, 52, 0.3), rgba(21, 128, 61, 0.3), transparent);
+  }
+
+  /* ===== HOLOGRAPHIC SHIMMER (for passes) ===== */
+  .holographic {
+    background: linear-gradient(
+      135deg,
+      rgba(22, 101, 52, 0.1) 0%,
+      rgba(21, 128, 61, 0.05) 25%,
+      rgba(255, 255, 255, 0.03) 50%,
+      rgba(21, 128, 61, 0.05) 75%,
+      rgba(22, 101, 52, 0.1) 100%
+    );
+    background-size: 400% 400%;
+    animation: gradientShift 6s ease infinite;
+  }
+
+  /* ===== NEON UNDERLINE (for active items) ===== */
+  .neon-underline {
+    position: relative;
+  }
+  .neon-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #166534, #15803d);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(22, 101, 52, 0.5);
+  }
+
+  /* ===== CUSTOM SCROLLBAR FOR SPECIFIC CONTAINERS ===== */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(22, 101, 52, 0.2);
+    border-radius: 999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(22, 101, 52, 0.4);
+  }
+
+  /* ===== GRADIENT CARD — RED PREMIUM ===== */
+  .card-gradient-red {
+    background: linear-gradient(135deg, rgba(22, 101, 52, 0.08) 0%, rgba(21, 128, 61, 0.04) 50%, rgba(255, 255, 255, 0.9) 100%);
+    border: 1px solid rgba(22, 101, 52, 0.12);
+  }
+  .card-gradient-red:hover {
+    background: linear-gradient(135deg, rgba(22, 101, 52, 0.12) 0%, rgba(21, 128, 61, 0.06) 50%, rgba(255, 255, 255, 0.95) 100%);
+    border-color: rgba(22, 101, 52, 0.2);
+  }
+
+  /* ===== BUTTON SHIMMER EFFECT (DISABLED) ===== */
+  .btn-shimmer {
+    position: relative;
+  }
+  .btn-shimmer::after {
+    display: none !important;
+  }
+
+  /* ===== SHAKE ANIMATION (for errors) ===== */
+  .animate-shake {
+    animation: shakeX 0.6s ease-in-out;
+  }
+
+  /* ===== CONFETTI DOTS BACKGROUND ===== */
+  .confetti-dots {
+    background-image:
+      radial-gradient(circle, rgba(22, 101, 52, 0.08) 1px, transparent 1px),
+      radial-gradient(circle, rgba(21, 128, 61, 0.06) 1px, transparent 1px),
+      radial-gradient(circle, rgba(146, 64, 14, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px, 60px 60px, 80px 80px;
+    background-position: 0 0, 20px 30px, 10px 60px;
+  }
+
+  /* ===== LOYALTY TIER BADGES ===== */
+  .tier-badge-gold {
+    background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+    background-size: 200% auto;
+    animation: gradientShift 3s ease infinite;
+    color: #3d2800;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(255, 215, 0, 0.3);
+  }
+  .tier-badge-platinum {
+    background: linear-gradient(135deg, #C0C0C0, #E8E8E8, #C0C0C0);
+    background-size: 200% auto;
+    animation: gradientShift 3s ease infinite;
+    color: #333;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(192, 192, 192, 0.3);
+  }
+
+  /* ===== TYPEWRITER EFFECT ===== */
+  .animate-typewriter {
+    overflow: hidden;
+    white-space: nowrap;
+    animation: typewriter 1s steps(20) forwards;
+  }
+
+  /* ===== MOBILE HORIZONTAL SCROLL WITH FADE ===== */
+  .scroll-fade-x {
+    position: relative;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .scroll-fade-x::-webkit-scrollbar {
+    display: none;
+  }
+}

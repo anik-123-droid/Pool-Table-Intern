@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                   Int               @id @default(autoincrement())
+  name                 String
+  email                String            @unique
+  password             String
+  role                 String            @default("ROLE_MEMBER")
+  mfaSecret            String?
+  mfaEnabled           Boolean           @default(false)
+  avatar               String?           @default("")
+  isLookingForOpponent Boolean           @default(false)
+  wins                 Int               @default(0)
+  losses               Int               @default(0)
+  rating               Int               @default(1000)
+  totalHoursPlayed     Float             @default(0.0)
+  loyaltyTier          String            @default("Member")
+  failedLoginAttempts  Int               @default(0)
+  lockUntil            DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  
+  bookings             Booking[]
+  orders               Order[]
+  waitlistEntries      WaitlistEntry[]
+  tournaments          Tournament[]      @relation("TournamentParticipants")
+  notifications        Notification[]
+  subscriptions        Subscription[]
+}
+
+model PoolTable {
+  id               Int       @id @default(autoincrement())
+  tableNumber      String    @unique
+  size             String
+  basePricePerHour Float
+  status           String    @default("active")
+  positionX        Float     @default(0.0)
+  positionY        Float     @default(0.0)
+  rotation         Int       @default(0)
+  color            String?   @default("blue")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  bookings         Booking[]
+}
+
+model Booking {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  tableId       Int
+  startTime     DateTime
+  endTime       DateTime
+  durationHours Float
+  totalAmount   Float
+  status        String            @default("confirmed")
+  equipment     BookingEquipment[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id])
+  table         PoolTable         @relation(fields: [tableId], references: [id])
+  orders        Order[]
+}
+
+model BookingEquipment {
+  id        Int      @id @default(autoincrement())
+  bookingId Int
+  name      String
+  price     Float
+
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  bookingId     Int?
+  totalAmount   Float
+  status        String      @default("pending")
+  paymentStatus String      @default("pending")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user          User        @relation(fields: [userId], references: [id])
+  booking       Booking?    @relation(fields: [bookingId], references: [id])
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id       Int      @id @default(autoincrement())
+  orderId  Int
+  menuId   Int
+  quantity Int      @default(1)
+  price    Float
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuId], references: [id])
+}
+
+model MenuItem {
+  id          Int         @id @default(autoincrement())
+  name        String
+  price       Float
+  category    String      @default("Snack")
+  image       String?     @default("")
+  description String?     @db.VarChar(500)
+  isAvailable Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  orderItems  OrderItem[]
+}
+
+model InventoryItem {
+  id           Int      @id @default(autoincrement())
+  name         String
+  quantity     Int      @default(0)
+  minThreshold Int      @default(5)
+  unit         String   @default("pcs")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Tournament {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?  @db.VarChar(500)
+  date        DateTime
+  fees        Float
+  prizeMoney  Float
+  status      String   @default("upcoming")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  participants User[]  @relation("TournamentParticipants")
+}
+
+model WaitlistEntry {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  tableType  String    @default("Any")
+  status     String    @default("waiting")
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user       User      @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String   @default("Notification")
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   @default("info")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  type           String
+  totalHours     Float
+  remainingHours Float
+  price          Float
+  mobileNumber   String
+  expiryDate     DateTime
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id])
+}
