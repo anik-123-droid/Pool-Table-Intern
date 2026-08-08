@@ -223,8 +223,8 @@ const Dashboard = () => {
                         className="glass-card rounded-[28px] border border-outline-variant/20 p-6 relative overflow-hidden card-lift group hover:border-primary/50 transition-all flex flex-col justify-between"
                       >
                         {/* Ticket Cutout Notches */}
-                        <div className="w-4 h-4 bg-background rounded-full absolute -left-2.5 top-1/2 -translate-y-1/2 border-r border-outline-variant/20" />
-                        <div className="w-4 h-4 bg-background rounded-full absolute -right-2.5 top-1/2 -translate-y-1/2 border-l border-outline-variant/20" />
+                        <div className="w-5 h-5 bg-background rounded-full absolute -left-3 top-1/2 -translate-y-1/2 border border-outline-variant/60 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.12)] z-10" />
+                        <div className="w-5 h-5 bg-background rounded-full absolute -right-3 top-1/2 -translate-y-1/2 border border-outline-variant/60 shadow-[inset_2px_0_4px_rgba(0,0,0,0.12)] z-10" />
 
                         {/* Header: Table Number & Status Pill */}
                         <div>
