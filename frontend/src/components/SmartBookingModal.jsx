@@ -40,6 +40,13 @@ const SmartBookingModal = ({ isOpen, onClose }) => {
         equipment: [],
         useSubscription: false
       });
+      if (res.data && res.data.id) {
+        try {
+          const cachedUserBookings = JSON.parse(localStorage.getItem('cached_user_bookings') || '[]');
+          const updatedUserBookings = [res.data, ...cachedUserBookings.filter(b => b.id !== res.data.id)];
+          localStorage.setItem('cached_user_bookings', JSON.stringify(updatedUserBookings));
+        } catch (e) {}
+      }
       onClose();
       navigate(`/booking-success/${res.data.id}`);
     } catch (err) {

@@ -44,14 +44,21 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<an
       return res.status(400).json({ message: 'Table is under maintenance' });
     }
 
-    const isOverlap = existingBookings.some((booking: any) => {
-      const bStart = new Date(booking.startTime);
-      const bEndWithBuffer = new Date(new Date(booking.endTime).getTime() + 15 * 60 * 1000);
-      return (start < bEndWithBuffer && end > bStart);
+    const BUFFER_MS = 15 * 60 * 1000;
+    const conflictingBooking = existingBookings.find((booking: any) => {
+      const bStart = new Date(booking.startTime).getTime();
+      const bEnd = new Date(booking.endTime).getTime();
+      const bStartWithBuffer = bStart - BUFFER_MS;
+      const bEndWithBuffer = bEnd + BUFFER_MS;
+      return (start.getTime() < bEndWithBuffer && end.getTime() > bStartWithBuffer);
     });
 
-    if (isOverlap) {
-      return res.status(400).json({ message: 'Table is not available for the selected time slot' });
+    if (conflictingBooking) {
+      const cStart = new Date(conflictingBooking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const cEnd = new Date(conflictingBooking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return res.status(400).json({ 
+        message: `Time slot conflicts with existing booking (${cStart} - ${cEnd}). Please select a shorter duration.` 
+      });
     }
 
     let totalAmount = 0;
@@ -113,7 +120,7 @@ export const getMyBookings = async (req: AuthRequest, res: Response): Promise<an
         },
         equipment: true
       },
-      orderBy: { startTime: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
     res.json(bookings);
   } catch (error: any) {
@@ -126,14 +133,14 @@ export const getAllBookings = async (req: Request, res: Response): Promise<any> 
     const bookings = await prisma.booking.findMany({
       include: {
         user: {
-          select: { name: true, email: true }
+          select: { name: true, email: true, phone: true }
         },
         table: {
           select: { tableNumber: true, size: true }
         },
         equipment: true
       },
-      orderBy: { startTime: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
     res.json(bookings);
   } catch (error: any) {
@@ -186,7 +193,7 @@ export const getBookingById = async (req: Request, res: Response): Promise<any> 
           select: { tableNumber: true, size: true, basePricePerHour: true }
         },
         user: {
-          select: { name: true, role: true }
+          select: { name: true, role: true, phone: true }
         },
         equipment: true
       }

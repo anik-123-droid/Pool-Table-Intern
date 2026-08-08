@@ -25,15 +25,38 @@ export const getTablesWithAvailability = async (req: Request, res: Response): Pr
     const checkTime = new Date(time as string);
     const checkEndTime = new Date(checkTime.getTime() + 60 * 60 * 1000); // 1 hour window
 
-    let waitlistCount = 0;
+    const dayStart = new Date(checkTime);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(checkTime);
+    dayEnd.setHours(23, 59, 59, 999);
 
-    [tables, existingBookings, waitlistCount] = await Promise.all([
+    let waitlistCount = 0;
+    let dayBookings: any[] = [];
+
+    [tables, existingBookings, dayBookings, waitlistCount] = await Promise.all([
       prisma.poolTable.findMany(),
       prisma.booking.findMany({
         where: {
           status: { in: ['confirmed', 'completed'] },
           startTime: { lt: checkEndTime },
           endTime: { gt: checkTime }
+        }
+      }),
+      prisma.booking.findMany({
+        where: {
+          status: { in: ['confirmed', 'completed'] },
+          startTime: { lt: dayEnd },
+          endTime: { gt: dayStart }
+        },
+        select: {
+          id: true,
+          tableId: true,
+          startTime: true,
+          endTime: true,
+          status: true
+        },
+        orderBy: {
+          startTime: 'asc'
         }
       }),
       req.query.summary === 'true' ? prisma.waitlistEntry.count({ where: { status: 'waiting' } }) : Promise.resolve(0)
@@ -46,7 +69,8 @@ export const getTablesWithAvailability = async (req: Request, res: Response): Pr
       if (status !== 'maintenance' && bookedTableIds.includes(table.id)) {
         status = 'occupied';
       }
-      return { ...table, status };
+      const tableUpcoming = dayBookings.filter((b: any) => b.tableId === table.id);
+      return { ...table, status, upcomingBookings: tableUpcoming };
     });
 
     if (req.query.summary === 'true') {

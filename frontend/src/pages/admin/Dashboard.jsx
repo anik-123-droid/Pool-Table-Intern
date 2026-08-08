@@ -5,10 +5,11 @@ import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import {
   TrendingUp, Calendar, Star, MoreVertical, Download, Plus,
-  ArrowRight, LayoutGrid, BarChart2, Search, Bell, User, Clock, Activity
+  ArrowRight, LayoutGrid, BarChart2, Search, Bell, User, Clock, Activity, Phone
 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getSocket } from '../../utils/socket';
 
 const formatTime = (dateStr) => {
   if (!dateStr) return "00:00";
@@ -24,44 +25,58 @@ const Dashboard = () => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  useEffect(() => {
-    // Update current time every minute to refresh statuses (ACTIVE -> COMPLETED) automatically
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const [stats, setStats] = useState({
-    dailyRevenue: 0,
-    monthlyRevenue: 0,
-    activeBookings: 0,
-    maxBookings: 40,
-    mostPopularTable: 'N/A',
-    todayBookings: []
+  const [stats, setStats] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_admin_bookings');
+      return { recentBookings: cached ? JSON.parse(cached) : [] };
+    } catch (e) {
+      return { recentBookings: [] };
+    }
   });
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(() => {
-      fetchStats();
-    }, 15000); // refresh every 15 seconds
-    return () => clearInterval(interval);
+
+    const socket = getSocket();
+    const handleUpdate = () => fetchStats();
+    socket.on('tables_updated', handleUpdate);
+    socket.on('booking_updated', handleUpdate);
+
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => {
+      socket.off('tables_updated', handleUpdate);
+      socket.off('booking_updated', handleUpdate);
+      clearInterval(timer);
+    };
   }, []);
 
   const fetchStats = async () => {
     try {
       const { data } = await api.get('/bookings');
-      if (data) {
-        setStats({
-          recentBookings: Array.isArray(data) ? data : []
+      if (data && Array.isArray(data)) {
+        const sortedBookings = [...data].sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a.id || 0);
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b.id || 0);
+          return timeB - timeA;
         });
+        setStats({ recentBookings: sortedBookings });
+        try {
+          localStorage.setItem('cached_admin_bookings', JSON.stringify(sortedBookings));
+        } catch (e) {}
       }
     } catch (err) {
       console.error(err);
     }
   };
 
+  const getBookingUserName = (booking) => {
+    if (booking.user?.name) return booking.user.name;
+    if (booking.userId?.name) return booking.userId.name;
+    if (booking.userId === user?.id || booking.userId?.id === user?.id) return user?.name || 'Guest User';
+    return 'Guest User';
+  };
+
   const handleUpdateStatus = async (bookingId, status) => {
-    // Instant UI update
     setActiveDropdown(null);
     setStats(prev => ({
       ...prev,
@@ -78,32 +93,35 @@ const Dashboard = () => {
   };
 
   const filteredBookings = (stats.recentBookings || []).filter(booking => {
-    const userName = booking.user?.name || booking.userId?.name || (booking.userId === user?.id || booking.userId?.id === user?.id ? user?.name : 'Guest User');
-    const matchesSearch = userName.toLowerCase().includes(searchQuery.toLowerCase());
+    const userName = getBookingUserName(booking);
+    const userPhone = booking.user?.phone || booking.userId?.phone || '';
+    const tableNum = (booking.table?.tableNumber || booking.tableId?.tableNumber || '').toString();
+    const query = searchQuery.toLowerCase();
     
+    const matchesSearch = !query || 
+      userName.toLowerCase().includes(query) || 
+      userPhone.toLowerCase().includes(query) || 
+      tableNum.includes(query) || 
+      (booking.status || '').toLowerCase().includes(query);
+    
+    if (!matchesSearch) return false;
     if (!booking.startTime) return false;
-    const bookingDate = new Date(booking.startTime);
-    const today = new Date();
-    const isToday = bookingDate.getDate() === today.getDate() &&
-                    bookingDate.getMonth() === today.getMonth() &&
-                    bookingDate.getFullYear() === today.getFullYear();
+
+    const bookingStart = new Date(booking.startTime);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const bookingDateStr = isValid(bookingStart) ? format(bookingStart, 'yyyy-MM-dd') : '';
+    const isToday = bookingDateStr === todayStr;
     
-    const startOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    const isFuture = bookingDate >= startOfTomorrow;
+    const startOfTomorrow = new Date();
+    startOfTomorrow.setHours(23, 59, 59, 999);
+    const isFuture = bookingStart > startOfTomorrow;
 
     if (showUpcoming) {
-      return matchesSearch && isFuture;
+      return isFuture;
     } else {
-      return matchesSearch && isToday;
+      return isToday;
     }
   });
-
-  const getBookingUserName = (booking) => {
-    if (booking.user?.name) return booking.user.name;
-    if (booking.userId?.name) return booking.userId.name;
-    if (booking.userId === user?.id || booking.userId?.id === user?.id) return user?.name || 'Guest User';
-    return 'Guest User';
-  };
 
   return (
     <div className="flex w-full min-h-screen bg-background text-on-surface">
@@ -188,10 +206,10 @@ const Dashboard = () => {
               <AnimatePresence mode="popLayout">
                 {filteredBookings.length > 0 ? (
                   filteredBookings.map((booking, index) => {
-                    const isUpcoming = new Date(booking.startTime) > currentTime;
-                    const isCompleted = new Date(booking.endTime) <= currentTime;
                     const isCancelled = booking.status === 'cancelled';
-                    const isActive = new Date(booking.startTime) <= currentTime && new Date(booking.endTime) > currentTime && !isCancelled;
+                    const isCompleted = booking.status === 'completed' || new Date(booking.endTime) <= currentTime;
+                    const isActive = new Date(booking.startTime) <= currentTime && new Date(booking.endTime) > currentTime && !isCancelled && !isCompleted;
+                    const isUpcoming = new Date(booking.startTime) > currentTime && !isCancelled && !isCompleted;
                     const tableNum = booking.table?.tableNumber || booking.tableId?.tableNumber || '?';
                     const tableSize = booking.table?.size || booking.tableId?.size || '';
                     
@@ -232,7 +250,7 @@ const Dashboard = () => {
                               isCancelled ? 'bg-error/15 text-error border-error/40' :
                               'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
                             }`}>
-                              {booking.status === 'cancelled'
+                              {isCancelled
                                 ? 'CANCELLED'
                                 : isCompleted 
                                 ? 'COMPLETED' 
@@ -255,6 +273,20 @@ const Dashboard = () => {
                             </div>
 
                             <div className="flex items-center justify-between text-xs pt-2 border-t border-outline-variant/10">
+                              <span className="text-on-surface-variant/60 font-bold uppercase tracking-wider text-[10px]">Contact</span>
+                              {(booking.user?.phone || booking.userId?.phone) ? (
+                                <a 
+                                  href={`tel:${booking.user?.phone || booking.userId?.phone}`}
+                                  className="text-on-surface hover:text-primary font-black text-sm tracking-tight flex items-center gap-1.5 transition-colors"
+                                >
+                                  <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
+                                  {booking.user?.phone || booking.userId?.phone}
+                                </a>
+                              ) : (
+                                <span className="text-on-surface-variant/60 font-bold text-xs">N/A</span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
                               <span className="text-on-surface-variant/60 font-bold uppercase tracking-wider text-[10px]">Date</span>
                               <span className="text-on-surface font-semibold">
                                 {isValid(new Date(booking.startTime)) ? format(new Date(booking.startTime), "EEE, MMM d, yyyy") : 'N/A'}
@@ -274,31 +306,33 @@ const Dashboard = () => {
                         </div>
 
                         {/* Card Action Footer */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/15 relative">
-                           <button 
-                             onClick={() => setActiveDropdown(activeDropdown === booking.id ? null : booking.id)}
-                             className="w-full py-2.5 px-3 bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-on-surface hover:text-primary transition-all text-center flex items-center justify-center gap-1.5"
-                           >
-                             Manage Booking
-                             <MoreVertical className="w-3.5 h-3.5" />
-                           </button>
-                           {activeDropdown === booking.id && (
-                             <div className="absolute right-0 bottom-12 w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl shadow-xl overflow-hidden z-50">
-                               <button
-                                 onClick={() => { handleUpdateStatus(booking.id, 'completed'); setActiveDropdown(null); }}
-                                 className="w-full text-center px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-on-surface hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors border-b border-outline-variant/10"
-                               >
-                                 Mark Completed
-                               </button>
-                               <button
-                                 onClick={() => { handleUpdateStatus(booking.id, 'cancelled'); setActiveDropdown(null); }}
-                                 className="w-full text-center px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-error hover:bg-error/10 transition-colors"
-                               >
-                                 Cancel Booking
-                               </button>
-                             </div>
-                           )}
-                        </div>
+                        {!isCancelled && !isCompleted && (
+                          <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/15 relative">
+                             <button 
+                               onClick={() => setActiveDropdown(activeDropdown === booking.id ? null : booking.id)}
+                               className="w-full py-2.5 px-3 bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-on-surface hover:text-primary transition-all text-center flex items-center justify-center gap-1.5"
+                             >
+                               Manage Booking
+                               <MoreVertical className="w-3.5 h-3.5" />
+                             </button>
+                             {activeDropdown === booking.id && (
+                               <div className="absolute right-0 bottom-12 w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl shadow-xl overflow-hidden z-50">
+                                 <button
+                                   onClick={() => { handleUpdateStatus(booking.id, 'completed'); setActiveDropdown(null); }}
+                                   className="w-full text-center px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-on-surface hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors border-b border-outline-variant/10"
+                                 >
+                                   Mark Completed
+                                 </button>
+                                 <button
+                                   onClick={() => { handleUpdateStatus(booking.id, 'cancelled'); setActiveDropdown(null); }}
+                                   className="w-full text-center px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-error hover:bg-error/10 transition-colors"
+                                 >
+                                   Cancel Booking
+                                 </button>
+                               </div>
+                             )}
+                          </div>
+                        )}
                       </motion.div>
                     );
                   })

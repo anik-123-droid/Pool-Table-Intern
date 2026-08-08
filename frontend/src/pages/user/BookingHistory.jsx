@@ -9,6 +9,8 @@ import { format, differenceInMinutes, isValid } from 'date-fns';
 import { QrCode, CheckCircle2, Search, ArrowRight, Play, MoreVertical, Calendar, Plus, Clock, X, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { getSocket } from '../../utils/socket';
+
 const BookingHistory = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
@@ -34,15 +36,29 @@ const BookingHistory = () => {
 
   useEffect(() => {
     fetchBookings();
-    const interval = setInterval(() => setNow(new Date()), 60000); // update every minute
-    return () => clearInterval(interval);
+
+    const socket = getSocket();
+    const handleUpdate = () => fetchBookings();
+    socket.on('tables_updated', handleUpdate);
+    socket.on('booking_updated', handleUpdate);
+
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => {
+      socket.off('tables_updated', handleUpdate);
+      socket.off('booking_updated', handleUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   const fetchBookings = async () => {
     try {
       const { data } = await api.get('/bookings/mybookings');
-      // Sort bookings by date descending (newest first)
-      const sortedBookings = (data || []).sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      // Sort bookings by creation date / ID descending (newest created booking first)
+      const sortedBookings = (data || []).sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a.id || 0);
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b.id || 0);
+        return timeB - timeA;
+      });
       setBookings(sortedBookings);
       try {
         localStorage.setItem('cached_user_bookings', JSON.stringify(sortedBookings));

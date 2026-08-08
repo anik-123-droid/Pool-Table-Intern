@@ -77,8 +77,8 @@ app.use(cors({
 }));
 
 // Payload Size Limiting
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ limit: '10kb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Data Sanitization
 app.use(sanitizeInput);

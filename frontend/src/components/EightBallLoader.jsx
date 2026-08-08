@@ -1,8 +1,8 @@
 import React from 'react';
 
-const EightBallLoader = ({ message = "Loading..." }) => {
+const EightBallLoader = ({ message = "Loading...", fullScreen = true }) => {
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-background">
+    <div className={fullScreen ? "h-screen flex flex-col items-center justify-center bg-background" : "py-8 flex flex-col items-center justify-center bg-transparent"}>
       <style>
         {`
           @keyframes spin-8 {

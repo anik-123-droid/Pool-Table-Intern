@@ -17,6 +17,7 @@ model User {
   mfaSecret            String?
   mfaEnabled           Boolean           @default(false)
   avatar               String?           @default("")
+  phone                String?           @default("")
   isLookingForOpponent Boolean           @default(false)
   wins                 Int               @default(0)
   losses               Int               @default(0)

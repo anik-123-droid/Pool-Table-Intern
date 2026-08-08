@@ -43,25 +43,25 @@ export const ToastProvider = ({ children }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl border backdrop-blur-xl shadow-2xl min-w-[320px] max-w-[450px] ${
+              className={`pointer-events-auto flex items-center gap-3.5 px-5 py-4 rounded-2xl border-2 bg-white text-black shadow-2xl min-w-[320px] max-w-[450px] ${
                 toast.type === 'error' 
-                  ? 'bg-[#1a0a0f]/90 border-error/30 text-error neon-shadow-red' 
-                  : 'bg-[#0a151a]/90 border-secondary/30 text-secondary neon-shadow-blue'
+                  ? 'border-red-500 shadow-red-500/10' 
+                  : 'border-emerald-500 shadow-emerald-500/10'
               }`}
             >
               <div className="shrink-0">
                 {toast.type === 'error' ? (
-                  <AlertCircle className="w-6 h-6" />
+                  <AlertCircle className="w-5 h-5 text-red-600" />
                 ) : (
-                  <CheckCircle2 className="w-6 h-6" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 )}
               </div>
-              <p className="flex-1 font-body-sm font-medium leading-tight">
+              <p className="flex-1 font-body-sm font-bold text-black text-xs md:text-sm leading-tight">
                 {toast.message}
               </p>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="shrink-0 p-1 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

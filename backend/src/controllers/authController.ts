@@ -37,6 +37,7 @@ export const registerUser = async (req: Request, res: Response): Promise<any> =>
       data: {
         name,
         email,
+        phone: req.body.phone || '',
         password: hashedPassword,
         role: 'user', // Hardcoded to prevent privilege escalation
       },
@@ -48,6 +49,7 @@ export const registerUser = async (req: Request, res: Response): Promise<any> =>
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         avatar: user.avatar,
         totalHoursPlayed: user.totalHoursPlayed,
@@ -194,6 +196,7 @@ export const getUserProfile = async (req: AuthRequest, res: Response): Promise<a
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       avatar: user.avatar,
       totalHoursPlayed: user.totalHoursPlayed,
@@ -230,8 +233,9 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       const updatedUser = await prisma.user.update({
         where: { id: req.user.id },
         data: {
-          name: req.body.name || user.name,
-          email: req.body.email || user.email,
+          name: (req.body.name && typeof req.body.name === 'string' && req.body.name.trim() !== '') ? req.body.name.trim() : user.name,
+          email: (req.body.email && typeof req.body.email === 'string' && req.body.email.trim() !== '') ? req.body.email.trim() : user.email,
+          phone: req.body.phone !== undefined ? req.body.phone : user.phone,
           avatar: req.body.avatar !== undefined ? req.body.avatar : user.avatar,
           password: hashedPassword,
         },
@@ -241,6 +245,7 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
         id: updatedUser.id,
         name: updatedUser.name,
         email: updatedUser.email,
+        phone: updatedUser.phone,
         role: updatedUser.role,
         avatar: updatedUser.avatar,
         totalHoursPlayed: updatedUser.totalHoursPlayed,
