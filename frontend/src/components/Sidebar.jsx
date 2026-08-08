@@ -68,8 +68,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button>
         )}
         <div className="shimmer-border">
-          <h1 className="text-on-surface font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-1 italic uppercase">Neon Night</h1>
-          <h1 className="font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-3 italic uppercase gradient-text-neon">Lounge</h1>
+          <h1 className="text-on-surface font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-1 italic uppercase">Royal Cue</h1>
+          <h1 className="font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-3 italic uppercase gradient-text-neon">Club</h1>
         </div>
         <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-3 animate-pulse-glow rounded-full" />
         <p className="text-on-surface-variant text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-bold opacity-50">Premium Experience</p>

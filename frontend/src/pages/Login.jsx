@@ -103,10 +103,10 @@ const Login = () => {
           className="flex flex-col items-center text-center mb-10"
         >
           <h1 className="font-h1 text-5xl md:text-6xl text-on-surface italic uppercase tracking-tighter leading-none">
-            NEON
+            ROYAL
           </h1>
           <h1 className="font-h1 text-5xl md:text-6xl italic uppercase tracking-tighter leading-none -mt-1 text-primary drop-shadow-sm">
-            NIGHT
+            CUE CLUB
           </h1>
           <p className="mt-4 text-[10px] md:text-xs font-bold text-on-surface-variant uppercase tracking-[0.4em]">
             Premium Experience

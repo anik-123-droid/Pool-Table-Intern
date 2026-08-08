@@ -299,7 +299,7 @@ const Settings = () => {
 
             {/* Footer space */}
             <div className="pt-8 md:pt-12 pb-4 flex flex-col md:flex-row items-center justify-between border-t border-outline-variant/10 mt-8 md:mt-12 text-[10px] text-on-surface-variant font-medium gap-2">
-              <p>© 2026 Neon Night Lounge. Premium Pool Experience.</p>
+              <p>© 2026 Royal Cue Club. Premium Pool Experience.</p>
               <div className="flex gap-4">
                 <a href="#" className="hover:text-on-surface transition-colors">Privacy Policy</a>
                 <a href="#" className="hover:text-on-surface transition-colors">Terms of Service</a>

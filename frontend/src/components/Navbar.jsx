@@ -15,7 +15,7 @@ const Navbar = () => {
   return (
     <nav className="bg-surface-container-high border-b border-outline-variant/30 px-lg py-md flex justify-between items-center">
       <div className="flex items-center gap-md">
-        <h1 className="font-h2 text-h2 text-primary font-black italic uppercase tracking-tighter">Neon Night Lounge</h1>
+        <h1 className="font-h2 text-h2 text-primary font-black italic uppercase tracking-tighter">Royal Cue Club</h1>
         <div className="hidden md:flex gap-md ml-xl">
           {user?.role === 'user' ? (
             <>
