@@ -20,19 +20,18 @@ const Sidebar = ({ isOpen, onClose }) => {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.06,
-        delayChildren: 0.08,
+        staggerChildren: 0.03,
+        delayChildren: 0,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, x: -30, scale: 0.95 },
+    hidden: { opacity: 0, x: -20 },
     show: { 
       opacity: 1, 
       x: 0, 
-      scale: 1,
-      transition: { type: "spring", stiffness: 350, damping: 22 } 
+      transition: { ease: [0.16, 1, 0.3, 1], duration: 0.2 } 
     },
   };
 
@@ -187,18 +186,18 @@ const Sidebar = ({ isOpen, onClose }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="fixed inset-0 bg-black/75 backdrop-blur-lg"
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md"
               onClick={onClose}
             />
 
-            {/* Sliding Cyber Drawer */}
+            {/* Ultra Fast Cyber Drawer */}
             <motion.div
-              initial={{ x: "-100%", skewY: -1.5, scale: 0.96 }}
-              animate={{ x: 0, skewY: 0, scale: 1 }}
-              exit={{ x: "-100%", skewY: 1.5, scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 320, damping: 28 }}
-              className="relative z-10 h-full origin-left"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.2 }}
+              className="relative z-10 h-full"
             >
               {sidebarContent}
             </motion.div>
