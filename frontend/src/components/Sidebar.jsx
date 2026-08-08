@@ -64,9 +64,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         />
       )}
 
-      <div className="fixed inset-y-0 left-0 z-50 pointer-events-none" style={{ perspective: "2000px" }}>
-        <aside className={`w-[260px] bg-white/90 backdrop-blur-xl border-r border-outline-variant/30 flex flex-col h-screen pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] origin-left ${
-          isOpen ? 'opacity-100 [transform:rotateY(0deg)]' : 'max-md:opacity-0 max-md:[transform:rotateY(-90deg)] max-md:pointer-events-none'
+      <div className="fixed inset-y-0 left-0 z-50 pointer-events-none">
+        <aside className={`w-[260px] bg-white/95 backdrop-blur-2xl border-r border-outline-variant/30 flex flex-col h-screen pointer-events-auto transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0 shadow-2xl' : 'max-md:-translate-x-full max-md:pointer-events-none'
         }`}>
         {/* Gradient border right edge */}
         <div className="absolute right-0 top-0 w-[1px] h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
