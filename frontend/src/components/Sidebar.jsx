@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Calendar, Star, ShieldAlert, Settings, Plus, LogOut, Trophy, Package, CreditCard, GraduationCap, Users, Utensils, X } from 'lucide-react';
+import { LayoutGrid, Calendar, ShieldAlert, Settings, Package, LogOut, X } from 'lucide-react';
 import { useContext, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import SmartBookingModal from './SmartBookingModal';
 
@@ -20,18 +20,19 @@ const Sidebar = ({ isOpen, onClose }) => {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
-        delayChildren: 0.1,
+        staggerChildren: 0.06,
+        delayChildren: 0.08,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
+    hidden: { opacity: 0, x: -30, scale: 0.95 },
     show: { 
       opacity: 1, 
       x: 0, 
-      transition: { type: "spring", stiffness: 300, damping: 24 } 
+      scale: 1,
+      transition: { type: "spring", stiffness: 350, damping: 22 } 
     },
   };
 
@@ -51,59 +52,39 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
-  return (
-    <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 md:hidden"
-          onClick={onClose}
-        />
-      )}
+  const sidebarContent = (
+    <aside className="w-[260px] bg-white/95 backdrop-blur-2xl border-r border-outline-variant/30 flex flex-col h-screen relative overflow-hidden shadow-[0_0_50px_rgba(22,101,52,0.15)]">
+      {/* Ambient Cyber Neon Edge Glow */}
+      <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/10 via-primary/50 to-primary/10 animate-pulse-glow" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-36 h-36 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="fixed inset-y-0 left-0 z-50 pointer-events-none">
-        <aside className={`w-[260px] bg-white/95 backdrop-blur-2xl border-r border-outline-variant/30 flex flex-col h-screen pointer-events-auto transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0 shadow-2xl' : 'max-md:-translate-x-full max-md:pointer-events-none'
-        }`}>
-        {/* Gradient border right edge */}
-        <div className="absolute right-0 top-0 w-[1px] h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
-        
-        {/* Ambient glow at top */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="p-6 md:p-8 relative">
-          {onClose && (
-            <button 
-              onClick={onClose}
-              className="md:hidden absolute top-6 right-4 p-2 text-on-surface-variant hover:text-on-surface transition-colors btn-press z-[60] pointer-events-auto cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-          {/* Brand Logo with Shimmer */}
-          <div className="shimmer-border">
-            <h1 className="text-on-surface font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-1 italic uppercase">Neon Night</h1>
-            <h1 className="font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-3 italic uppercase gradient-text-neon">Lounge</h1>
-          </div>
-          {/* Animated green divider */}
-          <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-3 animate-pulse-glow rounded-full" />
-          <p className="text-on-surface-variant text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-bold opacity-50">Premium Experience</p>
+      {/* Header Section */}
+      <div className="p-6 md:p-8 relative shrink-0">
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="md:hidden absolute top-6 right-4 p-2 text-on-surface-variant hover:text-on-surface transition-colors btn-press z-50 cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+        <div className="shimmer-border">
+          <h1 className="text-on-surface font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-1 italic uppercase">Neon Night</h1>
+          <h1 className="font-h1 text-2xl md:text-3xl tracking-tighter leading-none mb-3 italic uppercase gradient-text-neon">Lounge</h1>
         </div>
+        <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-3 animate-pulse-glow rounded-full" />
+        <p className="text-on-surface-variant text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-bold opacity-50">Premium Experience</p>
+      </div>
 
+      {/* Navigation Items */}
       <motion.nav 
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="flex-1 px-4 mt-2 space-y-1.5"
+        className="flex-1 px-4 mt-2 space-y-1.5 overflow-y-auto"
       >
         {navItems.map((item) => (
-          <motion.div
-            key={item.name}
-            variants={itemVariants}
-          >
+          <motion.div key={item.name} variants={itemVariants}>
             <NavLink
               to={item.path}
               end={item.path === '/' || item.path === '/admin'}
@@ -122,8 +103,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                   {isActive && (
                     <motion.div 
                       layoutId="sidebarActive"
-                      className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-l-full"
-                      style={{ boxShadow: '0 0 8px rgba(22,101,52,0.6)' }}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-primary rounded-l-full"
+                      style={{ boxShadow: '0 0 10px rgba(22,101,52,0.8)' }}
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
                   )}
@@ -134,13 +115,13 @@ const Sidebar = ({ isOpen, onClose }) => {
         ))}
       </motion.nav>
 
-      <div className="p-6 border-t border-outline-variant/10 relative">
-        {/* Gradient divider glow */}
+      {/* Footer User Profile & Action */}
+      <div className="p-6 border-t border-outline-variant/10 relative shrink-0">
         <div className="absolute top-0 left-4 right-4 gradient-divider" />
 
         {user?.role !== 'admin' && user?.role !== 'superadmin' && (
           <motion.button 
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(22,101,52,0.4)" }}
             whileTap={{ scale: 0.97 }}
             onClick={() => { setIsSmartBookingOpen(true); }}
             className="w-full bg-primary text-white font-h1 text-sm italic py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md hover:bg-primary/90 transition-all mb-8 uppercase tracking-[0.2em]"
@@ -187,8 +168,43 @@ const Sidebar = ({ isOpen, onClose }) => {
           </motion.button>
         </div>
       </div>
-        </aside>
+    </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar (Always Visible) */}
+      <div className="hidden md:block fixed inset-y-0 left-0 z-50">
+        {sidebarContent}
       </div>
+
+      {/* Mobile Drawer (Animated via Framer Motion) */}
+      <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-50 md:hidden flex">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 bg-black/75 backdrop-blur-lg"
+              onClick={onClose}
+            />
+
+            {/* Sliding Cyber Drawer */}
+            <motion.div
+              initial={{ x: "-100%", skewY: -1.5, scale: 0.96 }}
+              animate={{ x: 0, skewY: 0, scale: 1 }}
+              exit={{ x: "-100%", skewY: 1.5, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              className="relative z-10 h-full origin-left"
+            >
+              {sidebarContent}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <SmartBookingModal 
         isOpen={isSmartBookingOpen} 
