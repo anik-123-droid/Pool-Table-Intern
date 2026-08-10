@@ -9,12 +9,13 @@
   --color-surface-container-highest: #D4D4D4;
   --color-on-surface: #171717;
   --color-on-surface-variant: #525252;
-  --color-primary: #166534; /* Pool Table Felt Green */
-  --color-primary-container: #166534;
+  --color-primary: #C28840; /* Bronze */
+  --color-primary-container: #C28840;
   --color-on-primary-container: #ffffff;
-  --color-secondary: #92400e; /* Mahogany Wood */
-  --color-secondary-container: #92400e;
-  --color-background: #F9F8F6; /* Light ivory/chalk */
+  --color-secondary: #D4A373; /* Warm Tan */
+  --color-secondary-container: #D4A373;
+  --color-background: #FAFAFA; /* Soft White */
+  --color-accent: #2A2A2A; /* Rich Charcoal */
   --color-outline-variant: #D4D4D4;
   --color-error: #991B1B;
 
@@ -33,7 +34,7 @@
   --font-body-md: "Outfit", sans-serif;
   --font-body-sm: "Outfit", sans-serif;
   --font-caption: "Outfit", sans-serif;
-  --font-label-caps: "Playfair Display", serif;
+  --font-label-caps: "Outfit", sans-serif;
 }
 
 /* ===== CUSTOM SCROLLBAR (Light Theme) ===== */
@@ -240,7 +241,7 @@
 
   /* ===== GRADIENT TEXT ===== */
   .gradient-text-neon {
-    background: linear-gradient(135deg, #166534 0%, #15803d 50%, #166534 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-primary) 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;

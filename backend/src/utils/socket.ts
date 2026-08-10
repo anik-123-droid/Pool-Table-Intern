@@ -42,5 +42,6 @@ export const getIO = (): Server => {
 export const emitTableUpdate = () => {
   if (io) {
     io.emit('tables_updated');
+    io.emit('booking_updated');
   }
 };

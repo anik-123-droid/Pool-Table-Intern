@@ -94,6 +94,7 @@ const Login = () => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#E0D4CD] rounded-full blur-[120px] opacity-60"></div>
       </div>
 
+
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 w-full h-full pt-12 pb-24">
         {/* Animated Header */}
         <motion.div

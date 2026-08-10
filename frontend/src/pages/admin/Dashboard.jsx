@@ -43,10 +43,12 @@ const Dashboard = () => {
     socket.on('booking_updated', handleUpdate);
 
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    const pollInterval = setInterval(() => fetchStats(), 3000);
     return () => {
       socket.off('tables_updated', handleUpdate);
       socket.off('booking_updated', handleUpdate);
       clearInterval(timer);
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -94,15 +96,9 @@ const Dashboard = () => {
 
   const filteredBookings = (stats.recentBookings || []).filter(booking => {
     const userName = getBookingUserName(booking);
-    const userPhone = booking.user?.phone || booking.userId?.phone || '';
-    const tableNum = (booking.table?.tableNumber || booking.tableId?.tableNumber || '').toString();
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
     
-    const matchesSearch = !query || 
-      userName.toLowerCase().includes(query) || 
-      userPhone.toLowerCase().includes(query) || 
-      tableNum.includes(query) || 
-      (booking.status || '').toLowerCase().includes(query);
+    const matchesSearch = !query || userName.toLowerCase().includes(query);
     
     if (!matchesSearch) return false;
     if (!booking.startTime) return false;
@@ -121,6 +117,32 @@ const Dashboard = () => {
     } else {
       return isToday;
     }
+  });
+
+  const displayedBookings = [...filteredBookings].sort((a, b) => {
+    const getPriority = (booking) => {
+      const isCancelled = booking.status === 'cancelled';
+      const isCompleted = booking.status === 'completed' || new Date(booking.endTime) <= currentTime;
+      const isActive = new Date(booking.startTime) <= currentTime && new Date(booking.endTime) > currentTime && !isCancelled && !isCompleted;
+      const isUpcoming = new Date(booking.startTime) > currentTime && !isCancelled && !isCompleted;
+
+      if (isActive) return 1;
+      if (isUpcoming) return 2;
+      if (isCompleted) return 3;
+      if (isCancelled) return 4;
+      return 5;
+    };
+
+    const prioA = getPriority(a);
+    const prioB = getPriority(b);
+
+    if (prioA !== prioB) {
+      return prioA - prioB;
+    }
+
+    const timeA = a.startTime ? new Date(a.startTime).getTime() : 0;
+    const timeB = b.startTime ? new Date(b.startTime).getTime() : 0;
+    return timeB - timeA;
   });
 
   return (
@@ -143,7 +165,7 @@ const Dashboard = () => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant group-focus-within:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder="Search bookings by name..."
+                placeholder="Search bookings by customer name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-surface-container-low border border-primary/30 rounded-full py-2 pl-11 pr-6 text-sm w-96 focus:border-primary transition-all outline-none text-on-surface placeholder-on-surface-variant/50 focus:shadow-[0_0_16px_rgba(6,36,255,0.15)]"
@@ -170,7 +192,7 @@ const Dashboard = () => {
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant group-focus-within:text-primary transition-colors" />
             <input
               type="text"
-              placeholder="Search bookings by name..."
+              placeholder="Search bookings by customer name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-surface-container-low border border-primary/30 rounded-full py-3 pl-11 pr-6 text-sm focus:border-primary transition-all outline-none text-on-surface placeholder-on-surface-variant/50 focus:shadow-[0_0_16px_rgba(6,36,255,0.15)]"
@@ -187,7 +209,7 @@ const Dashboard = () => {
                 <h2 className="font-h1 text-2xl md:text-3xl lg:text-4xl text-on-surface uppercase tracking-tight mb-2">
                   {showUpcoming ? 'Upcoming ' : 'Today\'s '}<span className="gradient-text-neon">Bookings</span>
                 </h2>
-                <p className="text-on-surface-variant font-body-md opacity-80">Managing {filteredBookings.length} sessions for {showUpcoming ? 'upcoming days' : 'today'}</p>
+                <p className="text-on-surface-variant font-body-md opacity-80">Managing {displayedBookings.length} sessions for {showUpcoming ? 'upcoming days' : 'today'}</p>
               </motion.div>
               <div className="flex gap-3">
                 <motion.button 
@@ -204,8 +226,8 @@ const Dashboard = () => {
             {/* Cyberpunk VIP Ticket Pass Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
               <AnimatePresence mode="popLayout">
-                {filteredBookings.length > 0 ? (
-                  filteredBookings.map((booking, index) => {
+                {displayedBookings.length > 0 ? (
+                  displayedBookings.map((booking, index) => {
                     const isCancelled = booking.status === 'cancelled';
                     const isCompleted = booking.status === 'completed' || new Date(booking.endTime) <= currentTime;
                     const isActive = new Date(booking.startTime) <= currentTime && new Date(booking.endTime) > currentTime && !isCancelled && !isCompleted;
@@ -234,7 +256,7 @@ const Dashboard = () => {
                                 isActive ? 'bg-secondary/10 text-secondary border-secondary/30 shadow-[0_0_12px_rgba(56,189,248,0.2)]' :
                                 isUpcoming ? 'bg-primary/10 text-primary border-primary/30 shadow-[0_0_12px_rgba(22,101,52,0.2)]' : 
                                 isCancelled ? 'bg-error/10 text-error border-error/30' :
-                                'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                'bg-on-surface-variant/10 text-on-surface border-on-surface-variant/30'
                               }`}>
                                 #{tableNum}
                               </div>
@@ -245,10 +267,10 @@ const Dashboard = () => {
                             </div>
 
                             <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase border ${
-                              isActive ? 'bg-secondary/15 text-secondary border-secondary/40 shadow-[0_0_10px_rgba(56,189,248,0.25)] animate-pulse' :
+                              isActive ? 'bg-secondary/15 text-secondary border-secondary/40 shadow-[0_0_10px_rgba(56,189,248,0.25)]' :
                               isUpcoming ? 'bg-primary/15 text-primary border-primary/40 shadow-[0_0_10px_rgba(22,101,52,0.25)]' : 
                               isCancelled ? 'bg-error/15 text-error border-error/40' :
-                              'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                              'bg-on-surface-variant/15 text-on-surface border-on-surface-variant/40'
                             }`}>
                               {isCancelled
                                 ? 'CANCELLED'
@@ -306,7 +328,7 @@ const Dashboard = () => {
                         </div>
 
                         {/* Card Action Footer */}
-                        {!isCancelled && !isCompleted && (
+                        {!isCancelled && !isCompleted && !isActive && (
                           <div className="flex items-center gap-2 pt-3 border-t border-outline-variant/15 relative">
                              <button 
                                onClick={() => setActiveDropdown(activeDropdown === booking.id ? null : booking.id)}

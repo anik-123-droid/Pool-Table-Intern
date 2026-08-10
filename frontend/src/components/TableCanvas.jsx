@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { RotateCw, AlertTriangle, Plus, Trash2, Check, Settings, Palette } from 'lucide-react';
+import { RotateCw, AlertTriangle, Plus, Trash2, Check, Settings, Palette, IndianRupee } from 'lucide-react';
 import { playHoverSound } from '../utils/audio';
 import api from '../utils/api';
 
@@ -26,7 +26,7 @@ const VIRTUAL_ELEMENTS = {
   }
 };
 
-const TableCanvas = ({ tables, onTableSelect, isAdmin = false, isEditing = false, onLayoutChange, onToggleStatus, viewMode = 'standard' }) => {
+const TableCanvas = ({ tables, onTableSelect, isAdmin = false, isEditing = false, onLayoutChange, onToggleStatus, onEditPrice, viewMode = 'standard' }) => {
   const canvasRef = useRef(null);
   const [localTables, setLocalTables] = useState(tables);
   const localTablesRef = useRef(localTables);
@@ -517,6 +517,13 @@ const TableCanvas = ({ tables, onTableSelect, isAdmin = false, isEditing = false
                     title="Change Color"
                   >
                     <Palette className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEditPrice && onEditPrice(table); }}
+                    className="utility-btn p-1.5 text-on-surface hover:text-primary transition-colors hover:bg-on-surface/5 rounded-lg flex items-center gap-1"
+                    title="Set Hourly Price"
+                  >
+                    <IndianRupee className="w-4 h-4 text-primary" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleStatus && onToggleStatus(table); }}

@@ -17,13 +17,8 @@ export const getTablesWithAvailability = async (req: Request, res: Response): Pr
     let tables;
     let existingBookings = [];
 
-    if (!time) {
-      tables = await prisma.poolTable.findMany();
-      return res.json(tables);
-    }
-
-    const checkTime = new Date(time as string);
-    const checkEndTime = new Date(checkTime.getTime() + 60 * 60 * 1000); // 1 hour window
+    const checkTime = time ? new Date(time as string) : new Date();
+    const checkEndTime = time ? new Date(checkTime.getTime() + 60 * 60 * 1000) : new Date(checkTime.getTime() + 1000);
 
     const dayStart = new Date(checkTime);
     dayStart.setHours(0, 0, 0, 0);
@@ -37,7 +32,7 @@ export const getTablesWithAvailability = async (req: Request, res: Response): Pr
       prisma.poolTable.findMany(),
       prisma.booking.findMany({
         where: {
-          status: { in: ['confirmed', 'completed'] },
+          status: 'confirmed',
           startTime: { lt: checkEndTime },
           endTime: { gt: checkTime }
         }

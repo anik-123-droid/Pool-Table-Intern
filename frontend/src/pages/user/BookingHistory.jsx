@@ -24,7 +24,6 @@ const BookingHistory = () => {
     }
   });
   const [now, setNow] = useState(new Date());
-  const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [activeStatusFilter, setActiveStatusFilter] = useState('ALL');
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -43,10 +42,12 @@ const BookingHistory = () => {
     socket.on('booking_updated', handleUpdate);
 
     const interval = setInterval(() => setNow(new Date()), 60000);
+    const pollInterval = setInterval(() => fetchBookings(), 3000);
     return () => {
       socket.off('tables_updated', handleUpdate);
       socket.off('booking_updated', handleUpdate);
       clearInterval(interval);
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -68,75 +69,56 @@ const BookingHistory = () => {
     }
   };
 
-  const handleModify = (booking) => {
+  const handleCancelBooking = async (id) => {
+    try {
+      await api.delete(`/bookings/${id}`);
+      addToast('Booking cancelled successfully', 'info');
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+      fetchBookings();
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to cancel booking', 'error');
+    }
+  };
+
+  const handleModifyBooking = (booking) => {
     setSelectedBooking(booking);
+    const date = new Date(booking.startTime);
+    const isoLocal = isValid(date) ? format(date, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm");
     setModifyData({
-      startTime: format(new Date(booking.startTime), "yyyy-MM-dd'T'HH:mm"),
-      durationHours: Math.floor(booking.durationHours).toString(),
-      durationMinutes: ((booking.durationHours % 1) * 60).toString().padStart(2, '0')
+      startTime: isoLocal,
+      durationHours: String(Math.floor(booking.durationHours || 1)),
+      durationMinutes: String(Math.round(((booking.durationHours || 1) % 1) * 60))
     });
     setShowModifyModal(true);
   };
 
-  const updateBooking = async () => {
+  const submitModify = async (e) => {
+    e.preventDefault();
     try {
-      const totalHours = parseInt(modifyData.durationHours) + (parseInt(modifyData.durationMinutes) / 60);
-      const startTime = new Date(modifyData.startTime).toISOString();
-      const endTime = new Date(new Date(modifyData.startTime).getTime() + totalHours * 60 * 60 * 1000).toISOString();
-      
-      // Instant UI update
-      setBookings(prev => prev.map(b => b.id === selectedBooking.id ? { ...b, startTime, endTime, durationHours: totalHours } : b));
-      setShowModifyModal(false);
-      addToast('Booking updated successfully', 'success');
-
+      const totalHours = (parseFloat(modifyData.durationHours) || 0) + (parseFloat(modifyData.durationMinutes) || 0) / 60;
+      const isoTime = new Date(modifyData.startTime).toISOString();
       await api.put(`/bookings/${selectedBooking.id}`, {
-        startTime,
-        endTime,
+        startTime: isoTime,
         durationHours: totalHours
       });
+      addToast('Booking updated successfully!', 'success');
+      setShowModifyModal(false);
       fetchBookings();
     } catch (err) {
-      console.error(err);
-      addToast('Failed to update booking. Time might be unavailable.', 'error');
-      fetchBookings();
-    }
-  };
-
-  const handleCancelClick = (bookingId) => {
-    setCancelConfirmId(bookingId);
-    setActiveMenuId(null);
-  };
-
-  const confirmCancel = async () => {
-    const targetId = cancelConfirmId;
-    if (!targetId) return;
-
-    // Instant UI update
-    setCancelConfirmId(null);
-    setBookings(prev => prev.map(b => b.id === targetId ? { ...b, status: 'cancelled' } : b));
-    addToast('Booking cancelled successfully', 'success');
-
-    try {
-      await api.post(`/bookings/${targetId}/cancel`);
-      fetchBookings();
-    } catch (err) {
-      console.error(err);
-      addToast(err.response?.data?.message || 'Failed to cancel booking', 'error');
-      fetchBookings();
+      addToast(err.response?.data?.message || 'Failed to modify booking', 'error');
     }
   };
 
   const totalSpent = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
   const totalHours = bookings.reduce((sum, b) => sum + (b.durationHours || 0), 0);
   
-  // Filter bookings based on search query, selected date, and active status filter
+  // Filter bookings based on selected date and active status filter
   const filteredBookings = bookings.filter(b => {
-    const matchesSearch = b.table?.tableNumber?.toString().includes(searchQuery) || b.tableId?.tableNumber?.toString().includes(searchQuery) || b.status.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDate = filterDate && isValid(new Date(b.startTime)) 
       ? format(new Date(b.startTime), 'yyyy-MM-dd') === filterDate 
       : true;
     const matchesStatus = activeStatusFilter === 'ALL' || b.status.toUpperCase() === activeStatusFilter;
-    return matchesSearch && matchesDate && matchesStatus;
+    return matchesDate && matchesStatus;
   });
 
   const [selectedReceiptBooking, setSelectedReceiptBooking] = useState(null);
@@ -148,8 +130,6 @@ const BookingHistory = () => {
       <div className="flex-1 md:ml-[260px] flex flex-col min-w-0">
         <Header 
           title="Recent Bookings" 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
           onMenuClick={() => setIsSidebarOpen(true)}
         />
 

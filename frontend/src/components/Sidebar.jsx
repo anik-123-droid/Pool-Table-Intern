@@ -1,14 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Calendar, ShieldAlert, Settings, Package, LogOut, X } from 'lucide-react';
-import { useContext, useState } from 'react';
+import { LayoutGrid, Calendar, ShieldAlert, Settings, LogOut, X } from 'lucide-react';
+import { useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
-import SmartBookingModal from './SmartBookingModal';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { logout, user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [isSmartBookingOpen, setIsSmartBookingOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -43,8 +41,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     ...(user?.role === 'admin' || user?.role === 'superadmin' 
       ? [
           { name: 'Admin Dashboard', icon: ShieldAlert, path: '/admin' },
-          { name: 'Table Management', icon: LayoutGrid, path: '/admin/tables' },
-          { name: 'Virtual', icon: Package, path: '/admin/virtual' }
+          { name: 'Table Management', icon: LayoutGrid, path: '/admin/tables' }
         ] 
       : []
     ),
@@ -122,7 +119,13 @@ const Sidebar = ({ isOpen, onClose }) => {
           <motion.button 
             whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(22,101,52,0.4)" }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => { setIsSmartBookingOpen(true); }}
+            onClick={() => {
+              if (onClose) onClose();
+              navigate('/');
+              setTimeout(() => {
+                window.scrollTo({ top: 300, behavior: 'smooth' });
+              }, 100);
+            }}
             className="w-full bg-primary text-white font-h1 text-sm italic py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md hover:bg-primary/90 transition-all mb-8 uppercase tracking-[0.2em]"
           >
             Book a Table
@@ -204,11 +207,6 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
         )}
       </AnimatePresence>
-
-      <SmartBookingModal 
-        isOpen={isSmartBookingOpen} 
-        onClose={() => setIsSmartBookingOpen(false)} 
-      />
     </>
   );
 };

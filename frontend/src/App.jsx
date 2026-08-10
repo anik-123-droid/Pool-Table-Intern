@@ -5,7 +5,6 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import TableManagement from './pages/admin/TableManagement';
-import VirtualRoom from './pages/admin/VirtualRoom';
 import Home from './pages/user/Home';
 import BookingHistory from './pages/user/BookingHistory';
 import BookingSuccess from './pages/user/BookingSuccess';
@@ -45,7 +44,6 @@ function AppRoutes() {
       {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/tables" element={<ProtectedRoute adminOnly><TableManagement /></ProtectedRoute>} />
-      <Route path="/admin/virtual" element={<ProtectedRoute adminOnly><VirtualRoom /></ProtectedRoute>} />
       <Route path="/:name" element={<AdminQuickLogin />} />
     </Routes>
   );

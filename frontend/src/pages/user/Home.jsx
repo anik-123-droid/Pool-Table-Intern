@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
-import TableCanvas from '../../components/TableCanvas';
 import { getSocket } from '../../utils/socket';
-import { Clock, CheckCircle, XCircle, AlertTriangle, Maximize2, Info, X, Star, User, Calendar, Plus, GlassWater, Zap, CircleDot, CreditCard, Users, Trophy, Check, ArrowRight } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertTriangle, Maximize2, Info, X, Star, User, Calendar, Plus, GlassWater, Zap, CircleDot, CreditCard, Users, Trophy, Check, ArrowRight, LayoutGrid } from 'lucide-react';
 import { playClickSound, playSuccessChime } from '../../utils/audio';
 import WaitlistModal from '../../components/WaitlistModal';
 import EightBallLoader from '../../components/EightBallLoader';
@@ -33,7 +32,6 @@ const Home = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingStep, setBookingStep] = useState('form');
   const [confirmedBooking, setConfirmedBooking] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL TABLES');
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -57,9 +55,16 @@ const Home = () => {
     };
 
     socket.on('tables_updated', handleUpdate);
+    socket.on('booking_updated', handleUpdate);
+
+    const pollInterval = setInterval(() => {
+      fetchTables(selectedDate);
+    }, 4000);
 
     return () => {
       socket.off('tables_updated', handleUpdate);
+      socket.off('booking_updated', handleUpdate);
+      clearInterval(pollInterval);
     };
   }, [selectedDate]);
 
@@ -85,167 +90,149 @@ const Home = () => {
     }
   };
 
-  const calculateTotalPrice = () => {
-    const totalHours = (parseFloat(durationHours) || 0) + (parseFloat(durationMinutes) || 0) / 60;
-    let base = selectedTable.basePricePerHour * totalHours;
-    if (rentProfessionalCues) base += 50;
-    if (rentPremiumBalls) base += 30;
-    return (base + 10).toFixed(2);
-  };
-
   const getSlotInfo = () => {
     if (!selectedTable) return { maxAvailableHours: 12, conflictMessage: null, nextBooking: null, currentConflict: null };
 
     const tableData = tables.find(t => t.id === selectedTable.id) || selectedTable;
     const bookings = tableData.upcomingBookings || [];
-    const startMs = new Date(selectedDate).getTime();
+
+    const requestedStart = new Date(selectedDate);
     const totalHours = (parseFloat(durationHours) || 0) + (parseFloat(durationMinutes) || 0) / 60;
-    const BUFFER_MS = 15 * 60 * 1000;
+    const requestedEnd = new Date(requestedStart.getTime() + totalHours * 60 * 60 * 1000);
 
-    const currentConflict = bookings.find(b => {
-      const bStart = new Date(b.startTime).getTime();
-      const bEnd = new Date(b.endTime).getTime();
-      return startMs >= (bStart - BUFFER_MS) && startMs < (bEnd + BUFFER_MS);
-    });
+    let maxHours = 12;
+    let conflictMsg = null;
+    let nextBkg = null;
+    let currentBkg = null;
 
-    if (currentConflict) {
-      const confStart = isValid(new Date(currentConflict.startTime)) ? format(new Date(currentConflict.startTime), 'hh:mm a') : '';
-      const confEnd = isValid(new Date(currentConflict.endTime)) ? format(new Date(currentConflict.endTime), 'hh:mm a') : '';
-      return {
-        maxAvailableHours: 0,
-        conflictMessage: `Table #${selectedTable.tableNumber} is already booked at this time (${confStart} - ${confEnd}).`,
-        nextBooking: currentConflict,
-        currentConflict
-      };
-    }
+    for (const b of bookings) {
+      if (b.status === 'cancelled') continue;
+      const bStart = new Date(b.startTime);
+      const bEnd = new Date(b.endTime);
 
-    const futureBookings = bookings
-      .filter(b => new Date(b.startTime).getTime() > startMs)
-      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      if (requestedStart < bEnd && requestedEnd > bStart) {
+        currentBkg = b;
+        conflictMsg = `Conflicting booking by ${b.user?.name || 'another user'} from ${format(bStart, 'hh:mm a')} to ${format(bEnd, 'hh:mm a')}`;
+        break;
+      }
 
-    const nextBooking = futureBookings[0];
-
-    let maxAvailableHours = 12;
-    if (nextBooking) {
-      const nextStartMs = new Date(nextBooking.startTime).getTime();
-      const availableMs = nextStartMs - BUFFER_MS - startMs;
-      maxAvailableHours = Math.max(0, availableMs / (1000 * 60 * 60));
-    }
-
-    let conflictMessage = null;
-    if (totalHours <= 0) {
-      conflictMessage = 'Duration must be at least 15 minutes.';
-    } else if (totalHours > maxAvailableHours) {
-      if (nextBooking) {
-        const nextStartStr = isValid(new Date(nextBooking.startTime)) ? format(new Date(nextBooking.startTime), 'hh:mm a') : '';
-        const maxH = Math.floor(maxAvailableHours);
-        const maxM = Math.round((maxAvailableHours - maxH) * 60);
-        const durationStr = maxH > 0 ? `${maxH}h ${maxM}m` : `${maxM}m`;
-        conflictMessage = `Duration conflicts with upcoming booking at ${nextStartStr}. Max available duration: ${durationStr}.`;
-      } else {
-        conflictMessage = `Duration exceeds maximum allowed limit.`;
+      if (bStart > requestedStart) {
+        const hoursUntilNext = (bStart.getTime() - requestedStart.getTime()) / (1000 * 60 * 60);
+        if (hoursUntilNext < maxHours) {
+          maxHours = hoursUntilNext;
+          nextBkg = b;
+        }
       }
     }
 
-    return { maxAvailableHours, conflictMessage, nextBooking, currentConflict: null };
+    return { maxAvailableHours: maxHours, conflictMessage: conflictMsg, nextBooking: nextBkg, currentConflict: currentBkg };
   };
 
-  const handleBook = async () => {
-    setError('');
-    setSuccess('');
-    setIsSubmitting(true);
-
-    const slotInfo = getSlotInfo();
-    if (slotInfo.conflictMessage || slotInfo.maxAvailableHours <= 0) {
-      setError(slotInfo.conflictMessage || 'Selected slot is unavailable.');
-      setIsSubmitting(false);
-      return;
-    }
-    try {
-      const totalHours = (parseFloat(durationHours) || 0) + (parseFloat(durationMinutes) || 0) / 60;
-      if (totalHours <= 0) {
-        setError('Duration must be at least 15 minutes');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const equipment = [];
-      if (rentProfessionalCues) equipment.push({ name: 'Professional Cues', price: 50 });
-      if (rentPremiumBalls) equipment.push({ name: 'Premium Ball Set', price: 30 });
-
-      setBookingStep('submitting');
-
-      const { data } = await api.post('/bookings', {
-        tableId: selectedTable.id,
-        startTime: new Date(selectedDate).toISOString(),
-        durationHours: totalHours,
-        equipment: equipment
-      });
-
-      // Prepend new booking to user's cached bookings for instant UI availability
-      if (data && data.id) {
-        try {
-          const cachedUserBookings = JSON.parse(localStorage.getItem('cached_user_bookings') || '[]');
-          const updatedUserBookings = [data, ...cachedUserBookings.filter(b => b.id !== data.id)];
-          localStorage.setItem('cached_user_bookings', JSON.stringify(updatedUserBookings));
-        } catch (e) {}
-      }
-
-      setTimeout(() => {
-        playSuccessChime();
-        setConfirmedBooking(data);
-        setBookingStep('success');
-        setIsSubmitting(false);
-        fetchTables(selectedDate);
-      }, 1000);
-    } catch (err) {
-      console.error('Booking error:', err);
-      setError(err.response?.data?.message || 'Failed to book table');
-      setBookingStep('form');
-      setIsSubmitting(false);
-    }
+  const calculateTotalPrice = () => {
+    if (!selectedTable) return '0.00';
+    const totalHours = (parseFloat(durationHours) || 0) + (parseFloat(durationMinutes) || 0) / 60;
+    const tableRate = selectedTable.basePricePerHour || 0;
+    const tableCost = tableRate * totalHours;
+    const cuesCost = rentProfessionalCues ? 50 : 0;
+    const ballsCost = rentPremiumBalls ? 30 : 0;
+    return (tableCost + cuesCost + ballsCost).toFixed(2);
   };
 
   const handleTableSelect = (table) => {
     playClickSound();
     setSelectedTable(table);
+    setShowModal(true);
     setBookingStep('form');
-    setConfirmedBooking(null);
     setError('');
     setSuccess('');
-    setShowModal(true);
+  };
+
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const totalHours = (parseFloat(durationHours) || 0) + (parseFloat(durationMinutes) || 0) / 60;
+    if (totalHours <= 0) {
+      setError('Please select a valid duration.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const isoTime = new Date(selectedDate).toISOString();
+      const payload = {
+        tableId: selectedTable.id,
+        startTime: isoTime,
+        durationHours: totalHours,
+        rentProfessionalCues,
+        rentPremiumBalls,
+      };
+
+      const { data } = await api.post('/bookings', payload);
+      playSuccessChime();
+
+      setConfirmedBooking(data);
+      setBookingStep('success');
+      fetchTables(selectedDate);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to create booking');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filters = ['ALL TABLES', '7FT JUNIOR', '8FT STANDARD', '9FT TOURNAMENT'];
 
   return (
-    <div className="flex w-full min-h-screen bg-background text-on-background relative">
+    <div className="flex w-full min-h-screen bg-background text-on-surface">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className="flex-1 md:ml-[260px] flex flex-col min-w-0">
-        <Header
-          title="Live Floor Blueprint & Availability"
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onMenuClick={() => setIsSidebarOpen(true)}
-        />
+        <Header title="Floor Booking" onMenuClick={() => setIsSidebarOpen(true)} />
 
-        <main className="p-4 md:p-xl space-y-6 md:space-y-xl">
-          {/* Live Floor Metrics Bar */}
+        <main className="p-4 md:p-xl overflow-y-auto space-y-6 md:space-y-lg pb-32">
+          {/* Header Banner */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="glass-card p-6 md:p-10 rounded-[40px] border border-outline-variant/20 relative overflow-hidden card-gradient-red shimmer-border"
+          >
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 max-w-2xl">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-3 py-1 bg-primary/10 border border-primary/30 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">
+                  Live Reservations
+                </span>
+                <span className="px-3 py-1 bg-secondary/10 border border-secondary/30 text-secondary text-[10px] font-black uppercase tracking-widest rounded-full">
+                  Interactive Floorplan
+                </span>
+              </div>
+              <h1 className="font-h1 text-3xl md:text-5xl text-on-surface italic uppercase tracking-tighter leading-none mb-3">
+                Reserve Your <span className="gradient-text-neon">Table</span>
+              </h1>
+              <p className="text-on-surface-variant text-xs md:text-sm font-body leading-relaxed">
+                Select your preferred table from our real-time interactive floor plan below. Check live availability, customize equipment add-ons, and confirm instantly.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Quick Metrics Bar */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.05 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4"
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
           >
             <div className="glass-card p-4 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                <CheckCircle className="w-5 h-5 animate-pulse" />
+                <CheckCircle className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/60">Available</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/60">Available Now</p>
                 <p className="text-xl md:text-2xl font-black text-emerald-400 leading-none mt-0.5">
-                  {summaryStats?.availableCount ?? tables.filter(t => t.status !== 'occupied' && t.status !== 'maintenance').length} <span className="text-xs text-white/40 font-normal">/ {tables.length}</span>
+                  {summaryStats?.availableCount ?? tables.filter(t => t.status === 'active' || !t.status).length} <span className="text-xs text-white/40 font-normal">Tables</span>
                 </p>
               </div>
             </div>
@@ -291,7 +278,7 @@ const Home = () => {
             </div>
           </motion.div>
 
-          {/* Filters and Utilities */}
+          {/* Filters */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -321,44 +308,117 @@ const Home = () => {
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto mt-2 md:mt-0">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowWaitlistModal(true)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-secondary/10 border border-secondary/20 rounded-2xl text-[9px] font-black italic tracking-widest text-secondary hover:bg-secondary/20 transition-all uppercase"
-              >
-                <Users className="w-3.5 h-3.5" />
-                Waitlist
-              </motion.button>
-              <div className="flex items-center gap-xs text-on-surface-variant text-[10px] font-black italic tracking-widest bg-surface-container-low border border-outline-variant/20 px-4 py-2.5 rounded-2xl">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                <span>LIVE SYNC</span>
-              </div>
-            </div>
           </motion.div>
 
-          {/* Live Floor Map Section */}
+          {/* Live Floor Tables Grid */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="glass-card p-4 md:p-8 rounded-[40px] border border-outline-variant/20 relative w-full shimmer-border"
+            className="w-full"
           >
-            <div className="w-full h-full">
-              <TableCanvas
-                tables={tables.filter(table => {
-                  const matchesSearch = table.tableNumber.toString().includes(searchQuery);
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 md:gap-6">
+              {[...tables]
+                .sort((a, b) => a.tableNumber.toString().localeCompare(b.tableNumber.toString(), undefined, { numeric: true, sensitivity: 'base' }))
+                .filter(table => {
                   const matchesFilter = activeFilter === 'ALL TABLES' ||
                     (activeFilter === '7FT JUNIOR' && table.size?.toLowerCase() === '7ft') ||
                     (activeFilter === '8FT STANDARD' && table.size?.toLowerCase() === '8ft') ||
                     (activeFilter === '9FT TOURNAMENT' && table.size?.toLowerCase() === '9ft');
-                  return matchesSearch && matchesFilter;
+                  return matchesFilter;
+                })
+                .map((table, idx) => {
+                  const isOccupied = table.status === 'occupied';
+                  const isMaintenance = table.status === 'maintenance' || table.status === 'maintenance_scheduled';
+                  const isAvailable = !isOccupied && !isMaintenance;
+
+                  return (
+                <motion.div
+                  key={table.id || idx}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: Math.min(idx * 0.04, 0.4) }}
+                  className={`relative rounded-[32px] overflow-hidden border transition-all duration-300 flex flex-col justify-between group shadow-xl min-h-[300px] ${
+                    isAvailable 
+                      ? 'border-emerald-500/30 hover:border-emerald-500/70 bg-gradient-to-b from-[#14291b] to-[#0c1910] hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)]'
+                      : isOccupied
+                      ? 'border-rose-500/30 bg-gradient-to-b from-[#2a1317] to-[#170a0c] opacity-85'
+                      : 'border-amber-500/30 bg-gradient-to-b from-[#261d10] to-[#140e08] opacity-85'
+                  }`}
+                >
+                  {/* Top Mini Felt Visualizer Header */}
+                  <div className="relative p-4 sm:p-6 pb-3 sm:pb-5 bg-[#112216] border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(#153e24_1px,transparent_1px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full bg-amber-400 border border-yellow-200 shadow-[0_0_8px_rgba(251,191,36,0.6)] flex items-center justify-center text-[9px] font-bold text-black">8</span>
+                        <h3 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight">
+                          Table #<span className="font-sans">{table.tableNumber}</span>
+                        </h3>
+                      </div>
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-primary/80 mt-1">
+                        {table.size === '9ft' ? '9ft Pro Tournament' : table.size === '8ft' ? '8ft Standard' : '7ft Junior'}
+                      </p>
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className="self-end sm:self-auto">
+                      {isAvailable && (
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" /> Available
+                        </span>
+                      )}
+                      {isOccupied && (
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(244,63,94,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-rose-400" /> In Play
+                        </span>
+                      )}
+                      {isMaintenance && (
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-amber-400" /> Maintenance
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 relative z-10 flex-1 flex flex-col justify-between">
+                    <div className="bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                      <div>
+                        <p className="text-[10px] font-medium text-white/50 uppercase tracking-widest">Hourly Rate</p>
+                        <p className="text-xl sm:text-2xl font-bold text-primary font-body">
+                          ₹{table.basePricePerHour} <span className="text-[10px] sm:text-xs text-white/60 font-normal">/ hour</span>
+                        </p>
+                      </div>
+                      <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-2 sm:pt-0">
+                        <p className="text-[9px] sm:text-[10px] font-medium text-white/50 uppercase tracking-widest">Capacity</p>
+                        <p className="text-[10px] sm:text-xs font-semibold text-white">Up to 4 Players</p>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    {isAvailable ? (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleTableSelect(table)}
+                        className="w-full py-3 sm:py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10px] sm:text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center gap-2"
+                      >
+                        Reserve Table <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </motion.button>
+                    ) : (
+                      <button
+                        disabled
+                        className="w-full py-3 sm:py-4 bg-white/5 text-white/30 font-medium text-[9px] sm:text-xs uppercase tracking-wider rounded-2xl cursor-not-allowed border border-white/10"
+                      >
+                        {isOccupied ? 'Currently Occupied' : 'Under Maintenance'}
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+                  );
                 })}
-                isAdmin={false}
-                onTableSelect={handleTableSelect}
-                viewMode="standard"
-              />
             </div>
           </motion.div>
         </main>
@@ -619,7 +679,7 @@ const Home = () => {
                           whileHover={{ scale: isBookingBlocked ? 1 : 1.02 }}
                           whileTap={{ scale: isBookingBlocked ? 1 : 0.97 }}
                           disabled={isBookingBlocked}
-                          onClick={() => { if (!isBookingBlocked) { playClickSound(); handleBook(); } }}
+                          onClick={(e) => { if (!isBookingBlocked) { playClickSound(); handleBookingSubmit(e); } }}
                           className={`w-full font-h1 text-lg italic py-4 rounded-2xl transition-all uppercase tracking-widest mb-3 ${
                             isBookingBlocked 
                               ? 'bg-outline-variant/30 text-on-surface-variant/40 cursor-not-allowed border border-outline-variant/20' 

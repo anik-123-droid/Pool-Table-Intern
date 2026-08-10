@@ -2,13 +2,10 @@ import { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
-import TableCanvas from '../../components/TableCanvas';
 import { useToast } from '../../context/ToastContext';
 import { getSocket } from '../../utils/socket';
 import {
-  Plus, Edit2, Trash2, Search, Activity, Clock,
-  Settings, CheckCircle, ChevronLeft, ChevronRight, Check,
-  Monitor, Layout, IndianRupee, Wrench, Grid, MapPin, X, Menu, AlertTriangle
+  Plus, Edit2, Trash2, Clock, Settings, IndianRupee, Wrench, X, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,33 +21,173 @@ const TableManagement = () => {
   });
   const [showModal, setShowModal] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
-  const [formData, setFormData] = useState({ tableNumber: '', size: '9ft', basePricePerHour: '', color: 'green' });
-  const [searchQuery, setSearchQuery] = useState('');
+  const [formData, setFormData] = useState({ tableNumber: '', size: '9ft', basePricePerHour: '' });
   const [liveSessions, setLiveSessions] = useState(0);
-  const [viewMode, setViewMode] = useState('floor');
-  const [canvasViewMode, setCanvasViewMode] = useState('standard');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSavingLayout, setIsSavingLayout] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [maintenanceModalTable, setMaintenanceModalTable] = useState(null);
+  const [priceModalTable, setPriceModalTable] = useState(null);
+  const [newHourlyRate, setNewHourlyRate] = useState('');
+  const [timers, setTimers] = useState({});
 
   useEffect(() => {
     fetchTables();
-    fetchLiveSessions();
 
     const socket = getSocket();
     const handleUpdate = () => {
       fetchTables();
-      fetchLiveSessions();
     };
 
     socket.on('tables_updated', handleUpdate);
+    socket.on('booking_updated', handleUpdate);
+
+    const pollInterval = setInterval(() => {
+      fetchTables();
+    }, 3000);
 
     return () => {
       socket.off('tables_updated', handleUpdate);
+      socket.off('booking_updated', handleUpdate);
+      clearInterval(pollInterval);
     };
   }, []);
+
+  // Timer countdown background logic
+  useEffect(() => {
+    const loadTimers = () => {
+      try {
+        const stored = localStorage.getItem('poolTableTimers');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const now = Date.now();
+          const activeTimers = {};
+          let changed = false;
+          
+          for (const id in parsed) {
+            if (parsed[id] > now) {
+              activeTimers[id] = Math.floor((parsed[id] - now) / 1000);
+            } else {
+              changed = true;
+            }
+          }
+          
+          if (changed) {
+            const updatedStorage = {};
+            for (const id in activeTimers) {
+              updatedStorage[id] = parsed[id];
+            }
+            localStorage.setItem('poolTableTimers', JSON.stringify(updatedStorage));
+          }
+          
+          setTimers(activeTimers);
+        }
+      } catch (e) {}
+    };
+    
+    loadTimers();
+
+    const interval = setInterval(() => {
+      try {
+        const stored = localStorage.getItem('poolTableTimers');
+        if (!stored) return;
+        
+        const parsed = JSON.parse(stored);
+        const now = Date.now();
+        const next = {};
+        let needsCleanup = false;
+        
+        for (const id in parsed) {
+          if (parsed[id] > now) {
+            next[id] = Math.floor((parsed[id] - now) / 1000);
+          } else {
+            needsCleanup = true;
+          }
+        }
+
+        if (needsCleanup) {
+          const updatedStorage = {};
+          for (const id in next) {
+            updatedStorage[id] = parsed[id];
+          }
+          localStorage.setItem('poolTableTimers', JSON.stringify(updatedStorage));
+        }
+
+        setTimers(next);
+      } catch (e) {}
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleSetTimer = (table) => {
+    const mins = window.prompt(`Set countdown timer for Table ${table.tableNumber} (in minutes):`, '60');
+    if (mins !== null) {
+      const parsedMins = parseInt(mins, 10);
+      if (!isNaN(parsedMins) && parsedMins > 0) {
+        const endTime = Date.now() + (parsedMins * 60 * 1000);
+        try {
+          const stored = localStorage.getItem('poolTableTimers');
+          const parsed = stored ? JSON.parse(stored) : {};
+          parsed[table.id] = endTime;
+          localStorage.setItem('poolTableTimers', JSON.stringify(parsed));
+        } catch (err) {
+          console.error("Error saving timer", err);
+        }
+        setTimers(prev => ({ ...prev, [table.id]: parsedMins * 60 }));
+        addToast(`Timer set for Table ${table.tableNumber} (${parsedMins} min)`, 'success');
+      }
+    }
+  };
+
+  const handleClearTimer = (tableId) => {
+    try {
+      const stored = localStorage.getItem('poolTableTimers');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        delete parsed[tableId];
+        localStorage.setItem('poolTableTimers', JSON.stringify(parsed));
+      }
+    } catch (e) {}
+    setTimers(prev => {
+      const next = { ...prev };
+      delete next[tableId];
+      return next;
+    });
+    addToast('Timer stopped', 'info');
+  };
+
+  const handleOpenPriceModal = (table) => {
+    setPriceModalTable(table);
+    setNewHourlyRate(table.basePricePerHour ? table.basePricePerHour.toString() : '200');
+  };
+
+  const handleSavePrice = async (e) => {
+    e.preventDefault();
+    if (!priceModalTable) return;
+    const rateNum = parseFloat(newHourlyRate);
+    if (isNaN(rateNum) || rateNum <= 0) {
+      addToast('Please enter a valid positive price rate', 'error');
+      return;
+    }
+
+    const targetTable = priceModalTable;
+    setTables(prev => prev.map(t => t.id === targetTable.id ? { ...t, basePricePerHour: rateNum } : t));
+    setPriceModalTable(null);
+    addToast(`Table #${targetTable.tableNumber} rate set to INR ${rateNum}/h`, 'success');
+
+    try {
+      await api.put(`/tables/${targetTable.id}`, { basePricePerHour: rateNum });
+      fetchTables();
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to update price', 'error');
+      fetchTables();
+    }
+  };
 
   const fetchLiveSessions = async () => {
     try {
@@ -65,16 +202,25 @@ const TableManagement = () => {
 
   const fetchTables = async () => {
     try {
-      const { data } = await api.get('/tables');
-      if (Array.isArray(data) && data.length > 0) {
-        setTables(data);
+      const isoTime = new Date().toISOString();
+      const { data } = await api.get(`/tables/availability?time=${isoTime}&summary=true`);
+      let loadedTables = [];
+      if (data && data.tables) {
+        loadedTables = data.tables;
+        if (data.summary) {
+          setLiveSessions(data.summary.occupiedCount || 0);
+        }
+      } else if (Array.isArray(data)) {
+        loadedTables = data;
+      }
+      if (loadedTables.length > 0) {
+        setTables(loadedTables);
         try {
-          localStorage.setItem('admin_cached_tables', JSON.stringify(data));
+          localStorage.setItem('admin_cached_tables', JSON.stringify(loadedTables));
         } catch (e) {}
       }
     } catch (err) {
       console.error('Fetch tables error:', err);
-      // Fallback to cache if network fails, don't wipe tables
       try {
         const cached = localStorage.getItem('admin_cached_tables');
         if (cached && tables.length === 0) {
@@ -92,7 +238,7 @@ const TableManagement = () => {
           tableNumber: formData.tableNumber,
           size: formData.size,
           basePricePerHour: parseFloat(formData.basePricePerHour),
-          color: formData.color
+          color: 'green'
         });
         addToast('Table updated successfully', 'success');
       } else {
@@ -100,7 +246,7 @@ const TableManagement = () => {
           tableNumber: formData.tableNumber,
           size: formData.size,
           basePricePerHour: parseFloat(formData.basePricePerHour),
-          color: formData.color,
+          color: 'green',
           positionX: 50,
           positionY: 50,
           rotation: 0
@@ -114,8 +260,6 @@ const TableManagement = () => {
     }
   };
 
-  const handleCreateOrUpdate = handleSubmit;
-
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this table?')) return;
     try {
@@ -127,21 +271,10 @@ const TableManagement = () => {
     }
   };
 
-  const handleUpdateStatus = async (id, status) => {
-    try {
-      await api.put(`/tables/${id}`, { status });
-      addToast(`Table status updated to ${status}`, 'success');
-      fetchTables();
-    } catch (err) {
-      addToast('Failed to update table status', 'error');
-    }
-  };
-
   const handleToggleStatus = async (table) => {
     if (table.status === 'active') {
       setMaintenanceModalTable(table);
     } else {
-      // Optimistic instant UI update
       setTables(prev => prev.map(t => t.id === table.id ? { ...t, status: 'active' } : t));
       addToast('Table set to active', 'success');
       try {
@@ -158,7 +291,6 @@ const TableManagement = () => {
     const targetTable = maintenanceModalTable;
     const newStatus = type === 'emergency' ? 'maintenance' : 'maintenance_scheduled';
     
-    // Instant modal close and optimistic UI update
     setMaintenanceModalTable(null);
     setTables(prev => prev.map(t => t.id === targetTable.id ? { ...t, status: newStatus } : t));
     addToast(type === 'emergency' ? 'Table halted immediately' : 'Maintenance scheduled', 'success');
@@ -171,39 +303,11 @@ const TableManagement = () => {
     }
   };
 
-  const handleSaveLayout = async () => {
-    setIsSavingLayout(true);
-    setSaveSuccess(true);
-    addToast('Floor plan layout saved!', 'success');
-    setTimeout(() => setSaveSuccess(false), 3000);
-
-    try {
-      await api.put('/tables/bulk-layout', { tables });
-    } catch (err) {
-      addToast('Failed to save layout positions', 'error');
-      fetchTables();
-    } finally {
-      setIsSavingLayout(false);
-    }
-  };
-
-  const handleLayoutChange = async (updatedTables, action) => {
-    if (action && action.type === 'delete') {
-      try {
-        await api.delete(`/tables/${action.id}`);
-        fetchTables();
-      } catch (err) {
-        console.error('Failed to delete table', err);
-      }
-      return;
-    }
-    setTables(updatedTables);
-  };
-
-  const handleAddTableBlueprint = async (size) => {
+  // Open centered add modal pre-filling table size and auto-calculated table number
+  const handleOpenAddModal = (size) => {
     let nextNum = 1;
     if (tables.length > 0) {
-      const numbers = tables.map(t => parseInt(t.tableNumber, 10)).filter(n => !isNaN(n));
+      const numbers = tables.map(t => parseInt(t.tableNumber.toString().replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
       if (numbers.length > 0) {
         nextNum = Math.max(...numbers) + 1;
       } else {
@@ -216,35 +320,25 @@ const TableManagement = () => {
     if (size === '9ft') defaultRate = 250;
     if (size === '7ft') defaultRate = 180;
 
-    try {
-      const numTables = tables.length;
-      const row = Math.floor(numTables / 3);
-      const col = numTables % 3;
-      
-      const positionX = Math.min(10 + (col * 25), 75);
-      const positionY = Math.min(10 + (row * 20), 75);
-
-      await api.post('/tables', {
-        tableNumber: formattedNum,
-        size: size,
-        basePricePerHour: defaultRate,
-        positionX: positionX,
-        positionY: positionY,
-        rotation: 0,
-        color: 'green'
-      });
-      fetchTables();
-      addToast('Table added to layout', 'success');
-    } catch (err) {
-      addToast('Failed to place new table: ' + (err.response?.data?.message || err.message), 'error');
-    }
+    setEditingTable(null);
+    setFormData({
+      tableNumber: formattedNum,
+      size: size,
+      basePricePerHour: defaultRate.toString()
+    });
+    setShowModal(true);
   };
 
+  // Sort tables strictly by numeric table number (1, 2, 3, ...)
+  const sortedTables = [...tables].sort((a, b) => 
+    a.tableNumber.toString().localeCompare(b.tableNumber.toString(), undefined, { numeric: true, sensitivity: 'base' })
+  );
+
   const stats = [
-    { label: 'Total Tables', value: tables.length, icon: Monitor, color: 'text-primary' },
-    { label: 'Active Sessions', value: liveSessions, icon: Clock, color: 'text-secondary' },
-    { label: 'Maintenance', value: tables.filter(t => t.status === 'maintenance').length, icon: Settings, color: 'text-error' },
-    { label: 'Avg. Rate', value: 'INR ' + (tables.length > 0 ? (tables.reduce((acc, t) => acc + t.basePricePerHour, 0) / tables.length).toFixed(0) : '0'), icon: IndianRupee, color: 'text-on-surface' },
+    { label: 'Total Tables', value: tables.length, color: 'text-primary' },
+    { label: 'Active Sessions', value: liveSessions, color: 'text-secondary' },
+    { label: 'Maintenance', value: tables.filter(t => t.status === 'maintenance' || t.status === 'maintenance_scheduled').length, color: 'text-error' },
+    { label: 'Avg. Rate', value: 'INR ' + (tables.length > 0 ? (tables.reduce((acc, t) => acc + (t.basePricePerHour || 0), 0) / tables.length).toFixed(0) : '0'), color: 'text-on-surface' },
   ];
 
   return (
@@ -254,8 +348,8 @@ const TableManagement = () => {
       <div className="flex-1 md:ml-[260px] flex flex-col min-w-0">
         <Header title="Table Management" onMenuClick={() => setIsSidebarOpen(true)} />
 
-        <main className="p-4 md:p-xl pt-6 flex-1 flex flex-col space-y-4 md:space-y-lg">
-          {/* Stats Bar */}
+        <main className="p-4 md:p-xl pt-6 flex-1 flex flex-col space-y-4 md:space-y-lg pb-32">
+          {/* Stats Header */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {stats.map((stat, i) => (
               <motion.div 
@@ -263,376 +357,285 @@ const TableManagement = () => {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: i * 0.08 }}
-                className="glass-card p-4 md:p-5 rounded-2xl md:rounded-3xl border border-outline-variant/20 flex justify-between items-center group hover:border-primary/40 transition-all relative overflow-hidden bg-surface-container-low/50"
+                className="glass-card p-4 md:p-5 rounded-2xl md:rounded-3xl border border-outline-variant/20 flex justify-between items-center bg-surface-container-low/50 relative overflow-hidden"
               >
-                <div className="relative z-10">
+                <div>
                   <p className="text-[9px] md:text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 opacity-70">{stat.label}</p>
                   <p className="text-xl md:text-2xl font-body font-bold text-on-surface flex items-baseline gap-1">
                     {stat.value}
                   </p>
                 </div>
-                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-surface-container-highest flex items-center justify-center ${stat.color} border border-outline-variant/20 shadow-sm group-hover:scale-110 transition-transform icon-glow relative z-10 shrink-0`}>
-                  <stat.icon className="w-5 h-5 md:w-6 md:h-6" />
-                </div>
               </motion.div>
             ))}
           </div>
 
-          {/* Core Feature: Interactive Floor Plan Editor */}
-          {viewMode === 'floor' ? (
-            <div className="flex flex-col space-y-4 md:space-y-lg">
-              {/* Toolbar */}
-              <div className="glass-card p-3 md:p-4 rounded-[20px] md:rounded-[24px] border border-outline-variant/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-container-lowest/50">
-                <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                  {isEditing ? (
-                    <>
-                      <div className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mr-2 flex items-center gap-2">
-                        <Grid className="w-3.5 h-3.5" />
-                        Place Table:
-                      </div>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleAddTableBlueprint('9ft')}
-                        className="group px-4 py-2 bg-white border border-primary/30 hover:border-primary flex items-center gap-2 rounded-xl transition-all shadow-[0_0_10px_rgba(0,163,255,0.1)] hover:shadow-[0_0_15px_rgba(0,163,255,0.3)]"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-primary group-hover:rotate-90 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">9ft Pro</span>
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleAddTableBlueprint('8ft')}
-                        className="group px-4 py-2 bg-white border border-secondary/30 hover:border-secondary flex items-center gap-2 rounded-xl transition-all shadow-[0_0_10px_rgba(100,142,208,0.1)] hover:shadow-[0_0_15px_rgba(100,142,208,0.3)]"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-secondary group-hover:rotate-90 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-secondary">8ft Std</span>
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleAddTableBlueprint('7ft')}
-                        className="group px-4 py-2 bg-white border border-on-surface-variant/30 hover:border-on-surface flex items-center gap-2 rounded-xl transition-all"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-on-surface-variant group-hover:text-on-surface group-hover:rotate-90 transition-all" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant group-hover:text-on-surface">7ft Jr</span>
-                      </motion.button>
-                    </>
-                  ) : (
-                    <div className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5" />
-                      Click any table to start a manual countdown timer
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3 md:gap-4 items-center w-full md:w-auto">
-                  <AnimatePresence>
-                    {saveSuccess && (
-                      <motion.span 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="text-[10px] font-black text-secondary uppercase tracking-widest flex items-center gap-1.5 bg-secondary/5 border border-secondary/20 px-4 py-2 rounded-2xl"
-                      >
-                        <Check className="w-3.5 h-3.5" /> Saved!
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setIsEditing(!isEditing)}
-                    className={`font-h1 text-xs md:text-sm px-6 md:px-8 py-3 md:py-3.5 rounded-xl md:rounded-2xl transition-all uppercase tracking-[0.2em] border flex-1 md:flex-none ${isEditing ? 'bg-surface-container-highest text-on-surface-variant border-outline-variant/30 hover:bg-surface-container-highest/80' : 'bg-white text-primary border-primary/40 hover:bg-primary hover:text-white shadow-sm'}`}
-                  >
-                    {isEditing ? 'Cancel Edit' : 'Edit Layout'}
-                  </motion.button>
-
-                  {isEditing && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => {
-                        handleSaveLayout();
-                        setIsEditing(false);
-                      }}
-                      disabled={isSavingLayout}
-                      className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-h1 text-xs md:text-sm px-6 md:px-8 py-3 md:py-3.5 rounded-xl md:rounded-2xl transition-all shadow-sm uppercase tracking-[0.2em] flex-1 md:flex-none"
-                    >
-                      {isSavingLayout ? 'Saving...' : 'Save Blueprint'}
-                    </motion.button>
-                  )}
-                </div>
-              </div>
-
-              {/* Blueprint Canvas */}
-              <div className="w-full md:flex-1 relative">
-                <TableCanvas
-                  tables={tables}
-                  isAdmin={true}
-                  isEditing={isEditing}
-                  onLayoutChange={handleLayoutChange}
-                  onToggleStatus={handleToggleStatus}
-                  viewMode={canvasViewMode}
-                />
-              </div>
+          {/* Quick Add Action Bar (Opens Centered Add Modal) */}
+          <div className="glass-card p-4 rounded-3xl border border-outline-variant/20 flex items-center justify-between bg-surface-container-lowest/60 backdrop-blur-xl">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Quick Add Table:</span>
+              <button
+                onClick={() => handleOpenAddModal('9ft')}
+                className="px-4 py-2.5 bg-primary/10 border border-primary/30 hover:border-primary text-primary text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> 9ft Pro
+              </button>
+              <button
+                onClick={() => handleOpenAddModal('8ft')}
+                className="px-4 py-2.5 bg-secondary/10 border border-secondary/30 hover:border-secondary text-secondary text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> 8ft Standard
+              </button>
+              <button
+                onClick={() => handleOpenAddModal('7ft')}
+                className="px-4 py-2.5 bg-surface-container-highest border border-outline-variant/30 hover:border-on-surface text-on-surface text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> 7ft Junior
+              </button>
             </div>
-          ) : (
-            /* Traditional List View */
-            <div className="glass-card rounded-[28px] md:rounded-[40px] border border-outline-variant/20 overflow-hidden flex-1 flex flex-col mb-4 md:mb-xl shimmer-border">
-              {/* Desktop table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="border-b border-outline-variant/10">
-                    <tr className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-[0.2em]">
-                      <th className="px-6 md:px-10 py-8">Table Identity</th>
-                      <th className="px-6 md:px-10 py-8">Dimensions</th>
-                      <th className="px-6 md:px-10 py-8">Hourly Rate</th>
-                      <th className="px-6 md:px-10 py-8">Status</th>
-                      <th className="px-6 md:px-10 py-8 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/10">
-                    {tables.filter(t => t.tableNumber.toString().includes(searchQuery)).map((table, idx) => (
-                      <tr 
-                        key={table.id || idx} 
-                        style={{ animationDelay: `${Math.min(idx * 0.05, 0.5)}s` }}
-                        className="table-row-hover group animate-fade-in"
+          </div>
+
+          {/* Billiard Table Box Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 md:gap-6">
+            {sortedTables.map((table, idx) => {
+              const isTimerActive = timers[table.id] !== undefined;
+              const isOccupied = table.status === 'occupied';
+              const isMaintenance = table.status === 'maintenance' || table.status === 'maintenance_scheduled';
+              const isAvailable = !isOccupied && !isMaintenance;
+
+              return (
+                <motion.div
+                  key={table.id || idx}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: Math.min(idx * 0.04, 0.4) }}
+                  className={`relative rounded-[32px] overflow-hidden border transition-all duration-300 flex flex-col justify-between group shadow-xl min-h-[250px] ${
+                    isTimerActive && timers[table.id] <= 10 
+                      ? 'border-red-500 ring-2 ring-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.4)] animate-pulse' 
+                      : isAvailable 
+                      ? 'border-emerald-500/30 hover:border-emerald-500/70 bg-gradient-to-b from-[#14291b] to-[#0c1910] hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)]'
+                      : isOccupied
+                      ? 'border-rose-500/30 hover:border-rose-500/70 bg-gradient-to-b from-[#2a1317] to-[#170a0c]'
+                      : 'border-amber-500/30 hover:border-amber-500/70 bg-gradient-to-b from-[#261d10] to-[#140e08]'
+                  }`}
+                >
+                  {/* Top Billiard Mini Felt Visualizer Header */}
+                  <div className="relative p-4 sm:p-6 pb-3 sm:pb-5 bg-[#112216] border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(#153e24_1px,transparent_1px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
+
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full bg-amber-400 border border-yellow-200 shadow-[0_0_8px_rgba(251,191,36,0.6)] flex items-center justify-center text-[9px] font-bold text-black">8</span>
+                        <h3 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight">
+                          Table #<span className="font-sans">{table.tableNumber}</span>
+                        </h3>
+                      </div>
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-primary/80 mt-1">
+                        {table.size === '9ft' ? '9ft Pro Tournament' : table.size === '8ft' ? '8ft Standard' : '7ft Junior'}
+                      </p>
+                    </div>
+
+                    <div className="relative z-10 self-end sm:self-auto">
+                      {/* isAvailable removed from Admin Table Manage view as requested */}
+                      {isOccupied && (
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(244,63,94,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-rose-400" /> In Play
+                        </span>
+                      )}
+                      {isMaintenance && (
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-amber-400" /> Maintenance
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 relative z-10 flex-1 flex flex-col justify-center">
+                    <div className="bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                      <div>
+                        <p className="text-[9px] sm:text-[10px] font-medium text-white/50 uppercase tracking-widest">Hourly Rate</p>
+                        <button
+                          onClick={() => handleOpenPriceModal(table)}
+                          className="text-lg sm:text-xl font-bold text-primary hover:text-white transition-colors flex items-center gap-1 group/price text-left"
+                          title="Click to edit rate"
+                        >
+                          INR {table.basePricePerHour} <span className="text-xs font-normal text-white/60">/h</span>
+                          <Edit2 className="w-4 h-4 opacity-0 group-hover/price:opacity-100 transition-opacity ml-1 text-primary" />
+                        </button>
+                      </div>
+
+                      {isTimerActive ? (
+                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 bg-emerald-500/20 border border-emerald-400/50 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+                            <span className={`text-xs sm:text-sm font-semibold tracking-wider ${timers[table.id] <= 10 ? 'text-red-400 animate-pulse' : 'text-primary'}`}>
+                              {formatTime(timers[table.id])}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleClearTimer(table.id)}
+                            className="p-1 hover:bg-white/10 rounded-full text-white/60 hover:text-red-400 transition-colors"
+                            title="Clear Timer"
+                          >
+                            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleSetTimer(table)}
+                          className="w-full sm:w-auto justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-400/40 text-white/80 hover:text-primary text-[10px] sm:text-xs font-medium uppercase tracking-wider rounded-xl transition-all flex items-center gap-2"
+                          title="Start timer"
+                        >
+                          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" /> Set Timer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions Footer Bar */}
+                  <div className="p-3 sm:p-4 pt-2.5 sm:pt-3 bg-black/60 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 relative z-10">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        onClick={() => handleSetTimer(table)}
+                        className="p-2 rounded-xl text-white/70 hover:text-primary hover:bg-primary/10 transition-colors"
+                        title="Set Countdown Timer"
                       >
-                        <td className="px-6 md:px-10 py-8">
-                          <div className="flex items-center gap-4 md:gap-5">
-                            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-surface-container-highest flex items-center justify-center text-on-surface-variant border border-outline-variant/20 group-hover:border-primary/30 group-hover:text-primary transition-all icon-glow">
-                              <Layout className="w-6 h-6 md:w-7 md:h-7" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-h1 text-base md:text-lg text-on-surface uppercase tracking-tight">
-                                {table.size === '9ft' ? 'The Sapphire Pro' : table.size === '8ft' ? 'Emerald Classic' : 'Midnight Onyx'}
-                              </span>
-                              <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">
-                                ID: #TB-00{table.tableNumber} • {table.size === '9ft' ? 'Main Hall' : 'VIP Lounge'}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 md:px-10 py-8">
-                          <span className="text-on-surface font-medium text-sm">
-                            {table.size}' {table.size === '9ft' ? 'Tournament Grade' : table.size === '8ft' ? 'Standard' : 'Compact'}
-                          </span>
-                        </td>
-                        <td className="px-6 md:px-10 py-8">
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-on-surface font-bold text-lg">INR {table.basePricePerHour}</span>
-                            <span className="text-on-surface-variant/40 text-[10px] font-bold uppercase">/ hour</span>
-                          </div>
-                        </td>
-                        <td className="px-6 md:px-10 py-8">
-                          <span className={`px-5 py-2 rounded-full text-[9px] font-black tracking-[0.15em] border flex items-center gap-2 w-fit uppercase ${table.status === 'active' ? 'bg-secondary/5 text-secondary border-secondary/20' :
-                              (table.status === 'maintenance' || table.status === 'maintenance_scheduled') ? 'bg-error/5 text-error border-error/20' :
-                                'bg-primary/5 text-primary border-primary/20'
-                            }`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${table.status === 'active' ? 'bg-secondary' : 'bg-error'}`} />
-                            {table.status === 'active' ? 'Available' : table.status === 'maintenance_scheduled' ? 'Maint. Sched.' : table.status === 'maintenance' ? 'Maintenance' : 'Booked'}
-                          </span>
-                        </td>
-                        <td className="px-6 md:px-10 py-8 text-right">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <motion.button 
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleToggleStatus(table)}
-                              className={`p-3 rounded-xl transition-all ${
-                                table.status !== 'active' 
-                                  ? 'text-secondary bg-secondary/10 hover:bg-secondary/20' 
-                                  : 'text-on-surface-variant hover:text-error hover:bg-error/10'
-                              }`}
-                              title={table.status !== 'active' ? 'Revert to Active' : 'Maintenance Options'}
-                            >
-                              <Wrench className="w-5 h-5" />
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => { setEditingTable(table); setFormData(table); setShowModal(true); }}
-                              className="p-3 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
-                            >
-                              <Edit2 className="w-5 h-5" />
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleDelete(table.id)}
-                              className="p-3 text-on-surface-variant hover:text-error hover:bg-error/10 rounded-xl transition-all"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </motion.button>
-                          </div>
-                        </td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile card view */}
-              <div className="md:hidden divide-y divide-outline-variant/10">
-                {tables.filter(t => t.tableNumber.toString().includes(searchQuery)).map((table, idx) => (
-                  <motion.div
-                    key={table.id || idx}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(idx * 0.05, 0.5) }}
-                    className="p-4 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-surface-container-highest flex items-center justify-center text-on-surface-variant border border-outline-variant/20">
-                          <Layout className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-h1 text-sm text-on-surface uppercase">
-                            {table.size === '9ft' ? 'Sapphire Pro' : table.size === '8ft' ? 'Emerald' : 'Onyx'}
-                          </p>
-                          <p className="text-[9px] text-on-surface-variant/50 uppercase tracking-widest">#TB-00{table.tableNumber}</p>
-                        </div>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-[8px] font-black tracking-[0.15em] border uppercase ${
-                        table.status === 'active' ? 'bg-secondary/5 text-secondary border-secondary/20' :
-                        table.status === 'maintenance' ? 'bg-error/5 text-error border-error/20' :
-                        'bg-primary/5 text-primary border-primary/20'
-                      }`}>
-                        {table.status === 'active' ? 'Available' : table.status === 'maintenance' ? 'Maint.' : 'Booked'}
-                      </span>
+                        <Clock className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenPriceModal(table)}
+                        className="p-2 rounded-xl text-white/70 hover:text-primary hover:bg-primary/10 transition-colors"
+                        title="Edit Rate"
+                      >
+                        <IndianRupee className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(table)}
+                        className={`p-2 rounded-xl transition-colors ${table.status !== 'active' ? 'text-amber-400 bg-amber-500/20' : 'text-white/70 hover:text-amber-400 hover:bg-amber-500/10'}`}
+                        title="Maintenance Options"
+                      >
+                        <Wrench className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-on-surface-variant">
-                      <span>{table.size}' • INR {table.basePricePerHour}/h</span>
-                      <div className="flex gap-2">
-                        <button onClick={() => handleToggleStatus(table)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"><Wrench className="w-4 h-4" /></button>
-                        <button onClick={() => { setEditingTable(table); setFormData(table); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(table.id)} className="p-1.5 rounded-lg hover:bg-error/10 text-error/60 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
 
-              {/* Pagination */}
-              <div className="mt-auto border-t border-outline-variant/10 p-4 md:p-8 flex justify-between items-center">
-                <p className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">
-                  Showing {tables.length} of {tables.length} tables
-                </p>
-                <div className="flex gap-2">
-                  <button className="p-2 border border-outline-variant/20 rounded-lg text-on-surface-variant/40 cursor-not-allowed">
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button className="p-2 border border-outline-variant/20 rounded-lg text-on-surface-variant hover:border-primary hover:text-primary transition-all btn-press">
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { setEditingTable(table); setFormData(table); setShowModal(true); }}
+                        className="p-2 rounded-xl text-white/70 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                        title="Edit Table"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(table.id)}
+                        className="p-2 rounded-xl text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        title="Delete Table"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </main>
 
-        {/* Add/Edit Slide-Over Drawer */}
+        {/* Add/Edit Table CENTERED Popup Modal */}
         <AnimatePresence>
           {showModal && (
             <>
-              {/* Backdrop */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setShowModal(false)}
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
               />
-              {/* Drawer */}
               <motion.div
-                initial={{ x: '100%', opacity: 0.5 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: '100%', opacity: 0.5 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed top-0 right-0 h-full w-full md:w-[440px] z-50 bg-surface-container border-l border-outline-variant/20 shadow-2xl flex flex-col"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[90vh] z-[110] bg-surface-container border border-outline-variant/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+                style={{ width: '90vw', maxWidth: '440px' }}
               >
-                <div className="absolute top-0 left-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-primary/40 to-transparent" />
-                
-                <div className="p-6 md:p-8 flex-shrink-0 flex items-center justify-between border-b border-outline-variant/10">
-                  <h3 className="font-h1 text-2xl text-on-surface uppercase tracking-tight flex items-center gap-3">
-                    <Settings className="w-6 h-6 text-primary" />
-                    {editingTable ? 'Table Config' : 'New Station'}
-                  </h3>
+                <div className="flex justify-between items-start p-6 pb-4 border-b border-outline-variant/10">
+                  <div>
+                    <h3 className="font-h1 text-2xl text-on-surface uppercase tracking-tight flex items-center gap-3">
+                      <Settings className="w-6 h-6 text-primary" />
+                      {editingTable ? 'Edit Table' : 'Add New Table'}
+                    </h3>
+                    <p className="text-xs text-on-surface-variant mt-1">Configure table details and hourly rate</p>
+                  </div>
                   <button onClick={() => setShowModal(false)} className="text-on-surface-variant hover:text-on-surface p-2 bg-surface-container-highest rounded-full transition-colors">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
-                  <form id="table-form" onSubmit={handleSubmit} className="space-y-6">
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                  <form id="table-form" onSubmit={handleSubmit} className="space-y-5">
                     <div>
                       <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Table Number</label>
                       <input
                         required
                         value={formData.tableNumber}
                         onChange={e => setFormData({ ...formData, tableNumber: e.target.value })}
-                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 text-on-surface focus:border-primary/50 outline-none font-h1 focus:shadow-[0_0_12px_rgba(6,36,255,0.15)] transition-all"
+                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 text-on-surface text-base font-bold focus:border-primary/50 outline-none transition-all"
                         placeholder="e.g. 05"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Station Dimensions</label>
+                      <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Table Dimensions</label>
                       <select
                         value={formData.size}
                         onChange={e => setFormData({ ...formData, size: e.target.value })}
-                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 text-on-surface focus:border-primary/50 outline-none appearance-none font-h1 focus:shadow-[0_0_12px_rgba(6,36,255,0.15)] transition-all"
+                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 text-on-surface text-base font-bold focus:border-primary/50 outline-none appearance-none transition-all"
                       >
-                        <option value="7ft" className="bg-[#1a1a1a] text-on-surface">7ft Compact</option>
+                        <option value="7ft" className="bg-[#1a1a1a] text-on-surface">7ft Junior</option>
                         <option value="8ft" className="bg-[#1a1a1a] text-on-surface">8ft Standard</option>
-                        <option value="9ft" className="bg-[#1a1a1a] text-on-surface">9ft Tournament</option>
+                        <option value="9ft" className="bg-[#1a1a1a] text-on-surface">9ft Pro Tournament</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Hourly Rate (INR)</label>
-                      <input
-                        type="number"
-                        value={formData.basePricePerHour}
-                        onChange={(e) => setFormData({ ...formData, basePricePerHour: e.target.value })}
-                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 text-on-surface focus:border-primary/50 outline-none font-h1 focus:shadow-[0_0_12px_rgba(6,36,255,0.15)] transition-all"
-                        placeholder="e.g. 100"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Felt Color</label>
-                      <select
-                        value={formData.color || 'green'}
-                        onChange={e => setFormData({ ...formData, color: e.target.value })}
-                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 text-on-surface focus:border-primary/50 outline-none appearance-none font-h1 focus:shadow-[0_0_12px_rgba(6,36,255,0.15)] transition-all"
-                      >
-                        <option value="green" className="bg-[#1a1a1a] text-on-surface">Classic Green</option>
-                        <option value="blue" className="bg-[#1a1a1a] text-on-surface">Tournament Blue</option>
-                        <option value="burgundy" className="bg-[#1a1a1a] text-on-surface">Burgundy Red</option>
-                        <option value="black" className="bg-[#1a1a1a] text-on-surface">Charcoal Black</option>
-                        <option value="camel" className="bg-[#1a1a1a] text-on-surface">Camel Gold</option>
-                      </select>
+                      <div className="relative">
+                        <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+                        <input
+                          type="number"
+                          value={formData.basePricePerHour}
+                          onChange={(e) => setFormData({ ...formData, basePricePerHour: e.target.value })}
+                          className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 pl-12 text-on-surface text-base font-bold focus:border-primary/50 outline-none transition-all"
+                          placeholder="e.g. 200"
+                          required
+                        />
+                      </div>
                     </div>
                   </form>
                 </div>
                 
-                <div className="p-6 md:p-8 border-t border-outline-variant/10 bg-surface-container-lowest">
+                <div className="p-6 border-t border-outline-variant/10 bg-surface-container-lowest flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 py-3.5 bg-surface-container-highest text-on-surface font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-surface-container-high transition-colors"
+                  >
+                    Cancel
+                  </button>
                   <motion.button 
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     type="submit" 
                     form="table-form"
-                    className="w-full bg-primary text-on-surface font-h1 text-base md:text-lg py-4 rounded-2xl hover:brightness-110 transition-all neon-shadow-purple uppercase tracking-widest"
+                    className="flex-1 bg-primary text-white font-h1 text-sm py-3.5 rounded-xl hover:brightness-110 transition-all uppercase tracking-widest shadow-md"
                   >
-                    {editingTable ? 'Confirm Changes' : 'Initialize Station'}
+                    {editingTable ? 'Save Changes' : 'Add Table'}
                   </motion.button>
                 </div>
               </motion.div>
             </>
           )}
         </AnimatePresence>
+
         {/* Maintenance Options Modal */}
         <AnimatePresence>
           {maintenanceModalTable && (
@@ -642,13 +645,13 @@ const TableManagement = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setMaintenanceModalTable(null)}
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
               />
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[90vh] z-50 bg-surface-container border border-outline-variant/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[90vh] z-[110] bg-surface-container border border-outline-variant/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
                 style={{ width: '90vw', maxWidth: '400px' }}
               >
                 <div className="flex justify-between items-start p-6 pb-2">
@@ -664,7 +667,7 @@ const TableManagement = () => {
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="p-6 space-y-4">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -695,6 +698,79 @@ const TableManagement = () => {
                     </p>
                   </motion.button>
                 </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Set Hourly Price Modal */}
+        <AnimatePresence>
+          {priceModalTable && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setPriceModalTable(null)}
+                className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[90vh] z-[110] bg-surface-container border border-outline-variant/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+                style={{ width: '90vw', maxWidth: '400px' }}
+              >
+                <div className="flex justify-between items-start p-6 pb-2">
+                  <div>
+                    <h3 className="font-h1 text-2xl text-on-surface uppercase tracking-tight flex items-center gap-3">
+                      <IndianRupee className="w-6 h-6 text-primary" />
+                      Set Table Rate
+                    </h3>
+                    <p className="text-xs text-on-surface-variant mt-1">
+                      Update hourly price for Table #{priceModalTable.tableNumber} ({priceModalTable.size})
+                    </p>
+                  </div>
+                  <button onClick={() => setPriceModalTable(null)} className="text-on-surface-variant hover:text-on-surface p-2 bg-surface-container-highest rounded-full transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSavePrice} className="p-6 space-y-5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Hourly Rate (INR)</label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+                      <input
+                        type="number"
+                        step="10"
+                        min="10"
+                        required
+                        value={newHourlyRate}
+                        onChange={(e) => setNewHourlyRate(e.target.value)}
+                        className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 pl-12 text-on-surface text-lg font-bold focus:border-primary outline-none transition-all"
+                        placeholder="e.g. 250"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPriceModalTable(null)}
+                      className="flex-1 py-3 bg-surface-container-highest text-on-surface font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-surface-container-high transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 bg-primary text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-primary/90 transition-colors shadow-md"
+                    >
+                      Save Rate
+                    </button>
+                  </div>
+                </form>
               </motion.div>
             </>
           )}
