@@ -59,19 +59,23 @@ const Home = () => {
 
     const pollInterval = setInterval(() => {
       fetchTables(selectedDate);
-    }, 4000);
+    }, 1500);
+
+    const handleFocus = () => fetchTables(selectedDate);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       socket.off('tables_updated', handleUpdate);
       socket.off('booking_updated', handleUpdate);
       clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [selectedDate]);
 
   const fetchTables = async (timeStr = selectedDate) => {
     try {
       const isoTime = new Date(timeStr).toISOString();
-      const { data } = await api.get(`/tables/availability?time=${isoTime}&summary=true`);
+      const { data } = await api.get(`/tables/availability?time=${isoTime}&summary=true&_t=${Date.now()}`);
       if (data && data.tables) {
         setTables(data.tables);
         setSummaryStats(data.summary);

@@ -42,12 +42,16 @@ const TableManagement = () => {
 
     const pollInterval = setInterval(() => {
       fetchTables();
-    }, 3000);
+    }, 1500);
+
+    const handleFocus = () => fetchTables();
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       socket.off('tables_updated', handleUpdate);
       socket.off('booking_updated', handleUpdate);
       clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -203,7 +207,7 @@ const TableManagement = () => {
   const fetchTables = async () => {
     try {
       const isoTime = new Date().toISOString();
-      const { data } = await api.get(`/tables/availability?time=${isoTime}&summary=true`);
+      const { data } = await api.get(`/tables/availability?time=${isoTime}&summary=true&_t=${Date.now()}`);
       let loadedTables = [];
       if (data && data.tables) {
         loadedTables = data.tables;

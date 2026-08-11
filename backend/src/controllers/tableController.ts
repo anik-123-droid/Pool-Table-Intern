@@ -12,6 +12,9 @@ export const getTables = async (req: Request, res: Response): Promise<void> => {
 };
 
 export const getTablesWithAvailability = async (req: Request, res: Response): Promise<any> => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const { time } = req.query;
   try {
     let tables;
