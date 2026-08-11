@@ -57,9 +57,16 @@ const Home = () => {
     socket.on('tables_updated', handleUpdate);
     socket.on('booking_updated', handleUpdate);
 
+    // BroadcastChannel for instant sub-millisecond cross-tab update
+    let bc;
+    try {
+      bc = new BroadcastChannel('pool_table_realtime');
+      bc.onmessage = () => fetchTables(selectedDate);
+    } catch (e) {}
+
     const pollInterval = setInterval(() => {
       fetchTables(selectedDate);
-    }, 1500);
+    }, 700);
 
     const handleFocus = () => fetchTables(selectedDate);
     window.addEventListener('focus', handleFocus);
@@ -67,6 +74,7 @@ const Home = () => {
     return () => {
       socket.off('tables_updated', handleUpdate);
       socket.off('booking_updated', handleUpdate);
+      if (bc) bc.close();
       clearInterval(pollInterval);
       window.removeEventListener('focus', handleFocus);
     };

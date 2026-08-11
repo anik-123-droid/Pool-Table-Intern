@@ -29,6 +29,14 @@ const TableManagement = () => {
   const [newHourlyRate, setNewHourlyRate] = useState('');
   const [timers, setTimers] = useState({});
 
+  const notifyRealtimeUpdate = () => {
+    try {
+      const bc = new BroadcastChannel('pool_table_realtime');
+      bc.postMessage('update');
+      bc.close();
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchTables();
 
@@ -40,9 +48,15 @@ const TableManagement = () => {
     socket.on('tables_updated', handleUpdate);
     socket.on('booking_updated', handleUpdate);
 
+    let bc;
+    try {
+      bc = new BroadcastChannel('pool_table_realtime');
+      bc.onmessage = () => fetchTables();
+    } catch (e) {}
+
     const pollInterval = setInterval(() => {
       fetchTables();
-    }, 1500);
+    }, 700);
 
     const handleFocus = () => fetchTables();
     window.addEventListener('focus', handleFocus);
@@ -50,6 +64,7 @@ const TableManagement = () => {
     return () => {
       socket.off('tables_updated', handleUpdate);
       socket.off('booking_updated', handleUpdate);
+      if (bc) bc.close();
       clearInterval(pollInterval);
       window.removeEventListener('focus', handleFocus);
     };
@@ -186,6 +201,7 @@ const TableManagement = () => {
 
     try {
       await api.put(`/tables/${targetTable.id}`, { basePricePerHour: rateNum });
+      notifyRealtimeUpdate();
       fetchTables();
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to update price', 'error');
@@ -257,6 +273,7 @@ const TableManagement = () => {
         });
         addToast('Table created successfully', 'success');
       }
+      notifyRealtimeUpdate();
       setShowModal(false);
       fetchTables();
     } catch (err) {
@@ -269,6 +286,7 @@ const TableManagement = () => {
     try {
       await api.delete(`/tables/${id}`);
       addToast('Table deleted successfully', 'success');
+      notifyRealtimeUpdate();
       fetchTables();
     } catch (err) {
       addToast('Failed to delete table', 'error');
@@ -283,6 +301,7 @@ const TableManagement = () => {
       addToast('Table set to active', 'success');
       try {
         await api.put(`/tables/${table.id}`, { status: 'active' });
+        notifyRealtimeUpdate();
       } catch (err) {
         addToast('Failed to revert status', 'error');
         fetchTables();
@@ -301,6 +320,7 @@ const TableManagement = () => {
 
     try {
       await api.put(`/tables/${targetTable.id}/maintenance`, { type });
+      notifyRealtimeUpdate();
     } catch (err) {
       addToast('Failed to set maintenance', 'error');
       fetchTables();
