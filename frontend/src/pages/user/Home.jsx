@@ -199,7 +199,15 @@ const Home = () => {
             animate={{ y: 0, opacity: 1 }}
             className="glass-card p-6 md:p-10 rounded-[40px] border border-outline-variant/20 relative overflow-hidden card-gradient-red shimmer-border"
           >
-            <div className="absolute top-0 right-0 w-96 h-96 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 to-transparent rounded-full pointer-events-none" />
+            {/* Background Image with Mask Overlay */}
+            <div 
+              className="absolute inset-0 z-0 bg-cover bg-right bg-no-repeat opacity-30 md:opacity-50 pointer-events-none"
+              style={{ 
+                backgroundImage: `url('/hero_banner.png')`,
+                maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.2) 20%, rgba(0,0,0,1) 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.2) 20%, rgba(0,0,0,1) 100%)'
+              }} 
+            />
             <div className="relative z-10 max-w-2xl">
               <div className="flex items-center gap-2 mb-3">
                 <span className="px-3 py-1 bg-primary/10 border border-primary/30 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">
