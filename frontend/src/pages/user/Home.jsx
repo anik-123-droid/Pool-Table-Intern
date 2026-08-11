@@ -408,7 +408,7 @@ const Home = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleTableSelect(table)}
-                        className="w-full py-3 sm:py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10px] sm:text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center gap-2"
+                        className="w-full py-3 sm:py-4 bg-primary hover:bg-primary/90 text-white font-bold text-[10px] sm:text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center gap-2"
                       >
                         Reserve Table <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                       </motion.button>
