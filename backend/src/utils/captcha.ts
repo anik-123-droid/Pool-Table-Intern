@@ -9,9 +9,9 @@ export const verifyCaptcha = async (req: Request, res: Response, next: NextFunct
   const secretKey = process.env.CAPTCHA_SECRET_KEY || '1x0000000000000000000000000000000AA';
   const isDummyKey = secretKey === '1x0000000000000000000000000000000AA';
 
-  // Bypass if token is 'bypass', or if missing and in dev / using dummy key
-  if (token === 'bypass' || (!token && (process.env.NODE_ENV !== 'production' || isDummyKey))) {
-    console.warn('[Captcha] Bypassed (development or dummy key in use).');
+  // Bypass if token is 'bypass', missing, or in dev / using dummy key
+  if (token === 'bypass' || !token || process.env.NODE_ENV !== 'production' || isDummyKey) {
+    console.warn('[Captcha] Bypassed.');
     return next();
   }
 
