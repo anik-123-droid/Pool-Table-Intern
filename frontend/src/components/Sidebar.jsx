@@ -154,7 +154,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   user?.loyaltyTier === 'Platinum' ? 'tier-badge-platinum' :
                   'bg-surface-container-high text-on-surface-variant'
                 }`}>
-                  {user?.loyaltyTier || 'Member'} Member
+                  {user?.loyaltyTier && user.loyaltyTier.toLowerCase() !== 'member' ? `${user.loyaltyTier} Member` : 'Member'}
                 </span>
               )}
             </p>
