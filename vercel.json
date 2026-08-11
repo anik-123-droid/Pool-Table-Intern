@@ -1,6 +1,6 @@
 {
   "regions": ["syd1"],
-  "experimentalServices": {
+  "services": {
     "frontend": {
       "root": "frontend",
       "routePrefix": "/",
