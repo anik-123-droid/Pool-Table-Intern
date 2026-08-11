@@ -22,9 +22,13 @@ const generateToken = (res: Response, userId: number, role: string) => {
 
 export const registerUser = async (req: Request, res: Response): Promise<any> => {
   const { name, email, password, role } = req.body;
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+  const cleanName = name ? name.trim() : '';
 
   try {
-    const userExists = await prisma.user.findUnique({ where: { email } });
+    const userExists = await prisma.user.findFirst({ 
+      where: { email: { equals: cleanEmail, mode: 'insensitive' } } 
+    });
     if (userExists) {
       res.status(400).json({ message: 'User already exists' });
       return;
@@ -35,8 +39,8 @@ export const registerUser = async (req: Request, res: Response): Promise<any> =>
 
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: cleanName,
+        email: cleanEmail,
         phone: req.body.phone || '',
         password: hashedPassword,
         role: 'user', // Hardcoded to prevent privilege escalation
@@ -109,9 +113,15 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
   try {
     let user;
     if (email) {
-      user = await prisma.user.findUnique({ where: { email } });
+      const cleanEmail = email.trim();
+      user = await prisma.user.findFirst({ 
+        where: { email: { equals: cleanEmail, mode: 'insensitive' } } 
+      });
     } else if (name) {
-      user = await prisma.user.findFirst({ where: { name } });
+      const cleanName = name.trim();
+      user = await prisma.user.findFirst({ 
+        where: { name: { equals: cleanName, mode: 'insensitive' } } 
+      });
     }
 
     if (!user) {
