@@ -31,20 +31,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password, captchaToken) => {
-    const { data } = await api.post('/auth/login', { email, password, captchaToken });
+  const login = async (email, password) => {
+    const { data } = await api.post('/auth/login', { email, password });
     setUser(data);
     return data;
   };
 
-  const loginByName = async (name, password, captchaToken) => {
-    const { data } = await api.post('/auth/login', { name, password, captchaToken });
+  const loginByName = async (name, password) => {
+    const { data } = await api.post('/auth/login', { name, password });
     setUser(data);
     return data;
   };
 
-  const register = async (name, email, password, role, captchaToken) => {
-    const { data } = await api.post('/auth/register', { name, email, password, role, captchaToken });
+  const register = async (name, email, password, role) => {
+    const { data } = await api.post('/auth/register', { name, email, password, role });
     setUser(data);
     return data;
   };

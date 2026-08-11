@@ -10,46 +10,15 @@ const AdminQuickLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState('');
-  const captchaRef = React.useRef(null);
   const { loginByName } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const renderWidget = () => {
-      if (window.turnstile && captchaRef.current) {
-        captchaRef.current.innerHTML = '';
-        window.turnstile.render(captchaRef.current, {
-          sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
-          theme: 'light',
-          callback: (token) => {
-            setCaptchaToken(token);
-          },
-        });
-      }
-    };
-
-    if (window.turnstile) {
-      // If script is already loaded
-      renderWidget();
-    } else {
-      // Load Turnstile script dynamically with explicit render mode
-      const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true;
-      script.defer = true;
-      script.onload = renderWidget;
-      document.head.appendChild(script);
-    }
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const activeToken = captchaToken || 'bypass';
     setError('');
     setLoading(true);
     try {
-      const user = await loginByName(name, password, activeToken);
+      const user = await loginByName(name, password);
       if (user.role === 'admin' || user.role === 'superadmin') {
         navigate('/admin');
       } else {
@@ -57,10 +26,6 @@ const AdminQuickLogin = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials');
-      if (window.turnstile) {
-        try { window.turnstile.reset(); } catch (e) {}
-        setCaptchaToken('');
-      }
     } finally {
       setLoading(false);
     }
@@ -149,11 +114,6 @@ const AdminQuickLogin = () => {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
-
-              {/* Cloudflare Turnstile Widget */}
-              <div className="flex justify-center mt-2">
-                <div ref={captchaRef}></div>
               </div>
 
               <motion.button 

@@ -13,53 +13,21 @@ const Login = () => {
   const [role, setRole] = useState('user');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState('');
   const [shakeError, setShakeError] = useState(false);
-  const captchaRef = React.useRef(null);
   const { login, register } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const renderWidget = () => {
-      if (window.turnstile && captchaRef.current) {
-        // Clear any existing widget
-        captchaRef.current.innerHTML = '';
-        window.turnstile.render(captchaRef.current, {
-          sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA', // Use env variable or fallback
-          theme: 'light',
-          callback: (token) => {
-            setCaptchaToken(token);
-          },
-        });
-      }
-    };
-
-    if (window.turnstile) {
-      // If script is already loaded (from a previous visit or page)
-      renderWidget();
-    } else {
-      // Load Turnstile script dynamically with explicit render mode
-      const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true;
-      script.defer = true;
-      script.onload = renderWidget;
-      document.head.appendChild(script);
-    }
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const activeToken = captchaToken || 'bypass';
     setError('');
     setLoading(true);
     try {
       if (isLogin) {
-        const user = await login(email, password, activeToken);
+        const user = await login(email, password);
         if (user.role === 'admin' || user.role === 'superadmin') navigate('/admin');
         else navigate('/');
       } else {
-        const user = await register(name, email, password, role, activeToken);
+        const user = await register(name, email, password, role);
         if (user.role === 'admin' || user.role === 'superadmin') navigate('/admin');
         else navigate('/');
       }
@@ -67,10 +35,6 @@ const Login = () => {
       setError(err.response?.data?.message || 'Invalid email or password');
       setShakeError(true);
       setTimeout(() => setShakeError(false), 600);
-      if (window.turnstile) {
-        try { window.turnstile.reset(); } catch (e) { }
-        setCaptchaToken('');
-      }
     } finally {
       setLoading(false);
     }
@@ -79,8 +43,6 @@ const Login = () => {
   const toggleTab = (loginTab) => {
     setIsLogin(loginTab);
     setError('');
-    setCaptchaToken('');
-    if (window.turnstile) window.turnstile.reset();
   };
 
   return (
@@ -222,11 +184,6 @@ const Login = () => {
 
               </motion.div>
             </AnimatePresence>
-
-            {/* Cloudflare Turnstile Widget (Outside AnimatePresence so it doesn't remount on tab change) */}
-            <div className="flex justify-center mt-6">
-              <div ref={captchaRef}></div>
-            </div>
 
             <motion.button
               whileHover={{ scale: 1.02 }}
