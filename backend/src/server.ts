@@ -39,7 +39,7 @@ app.use(helmet({
       frameSrc: ["'self'", "https://challenges.cloudflare.com", "https://www.google.com/recaptcha/"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "http://localhost:*", "ws://localhost:*", "https://pool-table-opal.vercel.app"],
+      connectSrc: ["'self'", "http://localhost:*", "ws://localhost:*", "https://pool-table-opal.vercel.app", "https://pool-table-intern.vercel.app"],
       fontSrc: ["'self'", "https:", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -59,7 +59,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
-  'https://pool-table-opal.vercel.app'
+  'https://pool-table-opal.vercel.app',
+  'https://pool-table-intern.vercel.app'
 ];
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
