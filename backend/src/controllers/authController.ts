@@ -26,8 +26,8 @@ export const registerUser = async (req: Request, res: Response): Promise<any> =>
   const cleanName = name ? name.trim() : '';
 
   try {
-    const userExists = await prisma.user.findFirst({ 
-      where: { email: { equals: cleanEmail, mode: 'insensitive' } } 
+    const userExists = await prisma.user.findFirst({
+      where: { email: { equals: cleanEmail, mode: 'insensitive' } }
     });
     if (userExists) {
       res.status(400).json({ message: 'User already exists' });
@@ -114,13 +114,13 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
     let user;
     if (email) {
       const cleanEmail = email.trim();
-      user = await prisma.user.findFirst({ 
-        where: { email: { equals: cleanEmail, mode: 'insensitive' } } 
+      user = await prisma.user.findFirst({
+        where: { email: { equals: cleanEmail, mode: 'insensitive' } }
       });
     } else if (name) {
       const cleanName = name.trim();
-      user = await prisma.user.findFirst({ 
-        where: { name: { equals: cleanName, mode: 'insensitive' } } 
+      user = await prisma.user.findFirst({
+        where: { name: { equals: cleanName, mode: 'insensitive' } }
       });
     }
 
@@ -168,7 +168,7 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
       // Increment failed attempts on failure
       const attempts = user.failedLoginAttempts + 1;
       let lockTime = null;
-      
+
       if (attempts >= 5) {
         lockTime = new Date(new Date().getTime() + 15 * 60000); // Lock for 15 mins
       }
@@ -190,8 +190,8 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
 };
 
 export const logoutUser = (req: Request, res: Response) => {
-  res.clearCookie('jwt', { 
-    httpOnly: true, 
+  res.clearCookie('jwt', {
+    httpOnly: true,
     secure: process.env.NODE_ENV !== 'development',
     sameSite: 'lax',
     path: '/'
@@ -280,7 +280,7 @@ export const verifyLoginMfa = async (req: Request, res: Response): Promise<any> 
   const { userId, token } = req.body;
   try {
     const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
-    
+
     if (user && user.mfaEnabled && user.mfaSecret) {
       const verified = speakeasy.totp.verify({
         secret: user.mfaSecret,
@@ -311,7 +311,7 @@ export const verifyLoginMfa = async (req: Request, res: Response): Promise<any> 
 export const setupMfa = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const secret = speakeasy.generateSecret({ name: `PoolApp (${req.user.email})` });
-    
+
     await prisma.user.update({
       where: { id: req.user.id },
       data: { mfaSecret: secret.base32 }
@@ -330,7 +330,7 @@ export const verifyMfaSetup = async (req: AuthRequest, res: Response): Promise<a
   const { token } = req.body;
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    
+
     if (user && user.mfaSecret) {
       const verified = speakeasy.totp.verify({
         secret: user.mfaSecret,
