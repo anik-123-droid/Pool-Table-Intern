@@ -317,7 +317,7 @@ const BookingHistory = () => {
 
                         {isUpcoming && !hasStarted && (
                           <button
-                            onClick={() => handleModify(booking)}
+                            onClick={() => handleModifyBooking(booking)}
                             className="py-2.5 px-3 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-primary transition-all"
                           >
                             Modify
@@ -417,7 +417,7 @@ const BookingHistory = () => {
                     <motion.button 
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
-                      onClick={updateBooking}
+                      onClick={submitModify}
                       className="w-full py-4 bg-primary-container text-on-primary-container rounded-2xl font-bold text-lg uppercase tracking-wider neon-shadow-blue hover:brightness-110 transition-all"
                     >
                       Confirm Changes

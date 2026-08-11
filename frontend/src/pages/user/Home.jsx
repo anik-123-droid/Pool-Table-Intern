@@ -199,7 +199,7 @@ const Home = () => {
             animate={{ y: 0, opacity: 1 }}
             className="glass-card p-6 md:p-10 rounded-[40px] border border-outline-variant/20 relative overflow-hidden card-gradient-red shimmer-border"
           >
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-96 h-96 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 to-transparent rounded-full pointer-events-none" />
             <div className="relative z-10 max-w-2xl">
               <div className="flex items-center gap-2 mb-3">
                 <span className="px-3 py-1 bg-primary/10 border border-primary/30 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">
@@ -225,7 +225,7 @@ const Home = () => {
             transition={{ delay: 0.05 }}
             className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
           >
-            <div className="glass-card p-4 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl flex items-center gap-3">
+            <div className="glass-card p-4 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                 <CheckCircle className="w-5 h-5" />
               </div>
@@ -236,8 +236,7 @@ const Home = () => {
                 </p>
               </div>
             </div>
-
-            <div className="glass-card p-4 rounded-3xl border border-rose-500/20 bg-rose-500/5 backdrop-blur-xl flex items-center gap-3">
+            <div className="glass-card p-4 rounded-3xl border border-rose-500/20 bg-rose-500/5 flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
                 <CircleDot className="w-5 h-5" />
               </div>
@@ -250,11 +249,10 @@ const Home = () => {
             </div>
 
             <div
-              onClick={() => setShowWaitlistModal(true)}
-              className="glass-card p-4 rounded-3xl border border-amber-500/20 bg-amber-500/5 backdrop-blur-xl flex items-center gap-3 cursor-pointer hover:border-amber-500/40 hover:bg-amber-500/10 transition-all group"
-              title="Click to view or join waitlist"
+              onClick={() => setActiveFilter('MAINTENANCE')}
+              className="glass-card p-4 rounded-3xl border border-amber-500/20 bg-amber-500/5 flex items-center gap-3 cursor-pointer hover:border-amber-500/40 hover:bg-amber-500/10 transition-all group"
             >
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 group-hover:scale-110 transition-transform">
                 <Users className="w-5 h-5" />
               </div>
               <div>
@@ -264,8 +262,7 @@ const Home = () => {
                 </p>
               </div>
             </div>
-
-            <div className="glass-card p-4 rounded-3xl border border-primary/20 bg-primary/5 backdrop-blur-xl flex items-center gap-3">
+            <div className="glass-card p-4 rounded-3xl border border-primary/20 bg-primary/5 flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0">
                 <Trophy className="w-5 h-5" />
               </div>
@@ -283,7 +280,7 @@ const Home = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 glass-card p-4 border border-outline-variant/15 rounded-3xl backdrop-blur-xl"
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 glass-card p-4 border border-outline-variant/15 rounded-3xl"
           >
             <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto">
               <div className="flex items-center gap-3 bg-surface-container-low hover:bg-surface-container transition-colors border border-outline-variant/30 px-6 py-2.5 rounded-2xl mr-2 cursor-pointer focus-within:border-primary/50">
@@ -338,26 +335,26 @@ const Home = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: Math.min(idx * 0.04, 0.4) }}
-                  className={`relative rounded-[32px] overflow-hidden border transition-all duration-300 flex flex-col justify-between group shadow-xl min-h-[300px] ${
+                  className={`relative rounded-[32px] overflow-hidden border transition-all duration-300 flex flex-col justify-between group min-h-[300px] bg-white ${
                     isAvailable 
-                      ? 'border-emerald-500/30 hover:border-emerald-500/70 bg-gradient-to-b from-[#14291b] to-[#0c1910] hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)]'
+                      ? 'border-outline-variant/30 hover:border-primary/40 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(194,136,64,0.12)] card-lift'
                       : isOccupied
-                      ? 'border-rose-500/30 bg-gradient-to-b from-[#2a1317] to-[#170a0c] opacity-85'
-                      : 'border-amber-500/30 bg-gradient-to-b from-[#261d10] to-[#140e08] opacity-85'
+                      ? 'border-rose-500/10 shadow-sm opacity-90'
+                      : 'border-amber-500/10 shadow-sm opacity-90'
                   }`}
                 >
-                  {/* Top Mini Felt Visualizer Header */}
-                  <div className="relative p-4 sm:p-6 pb-3 sm:pb-5 bg-[#112216] border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(#153e24_1px,transparent_1px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
-
+                  {/* Top Header */}
+                  <div className={`relative p-4 sm:p-6 pb-3 sm:pb-5 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 overflow-hidden ${
+                    isAvailable ? 'bg-primary/5 border-primary/10' : isOccupied ? 'bg-rose-500/5 border-rose-500/10' : 'bg-amber-500/5 border-amber-500/10'
+                  }`}>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full bg-amber-400 border border-yellow-200 shadow-[0_0_8px_rgba(251,191,36,0.6)] flex items-center justify-center text-[9px] font-bold text-black">8</span>
-                        <h3 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight">
+                        <span className="w-4 h-4 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[9px] font-bold text-primary">8</span>
+                        <h3 className="text-xl sm:text-2xl font-bold text-on-surface uppercase tracking-tight">
                           Table #<span className="font-sans">{table.tableNumber}</span>
                         </h3>
                       </div>
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-primary/80 mt-1">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-on-surface-variant/80 mt-1">
                         {table.size === '9ft' ? '9ft Pro Tournament' : table.size === '8ft' ? '8ft Standard' : '7ft Junior'}
                       </p>
                     </div>
@@ -365,35 +362,35 @@ const Home = () => {
                     {/* Status Badge */}
                     <div className="self-end sm:self-auto">
                       {isAvailable && (
-                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400" /> Available
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" /> Available
                         </span>
                       )}
                       {isOccupied && (
-                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(244,63,94,0.3)]">
-                          <span className="w-2 h-2 rounded-full bg-rose-400" /> In Play
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-500" /> In Play
                         </span>
                       )}
                       {isMaintenance && (
-                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
-                          <span className="w-2 h-2 rounded-full bg-amber-400" /> Maintenance
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" /> Maintenance
                         </span>
                       )}
                     </div>
                   </div>
 
                   {/* Card Body */}
-                  <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 relative z-10 flex-1 flex flex-col justify-between">
-                    <div className="bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 relative z-10 flex-1 flex flex-col justify-between bg-white">
+                    <div className="bg-surface-container-low p-3 sm:p-4 rounded-2xl border border-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                       <div>
-                        <p className="text-[10px] font-medium text-white/50 uppercase tracking-widest">Hourly Rate</p>
+                        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Hourly Rate</p>
                         <p className="text-xl sm:text-2xl font-bold text-primary font-body">
-                          ₹{table.basePricePerHour} <span className="text-[10px] sm:text-xs text-white/60 font-normal">/ hour</span>
+                          ₹{table.basePricePerHour} <span className="text-[10px] sm:text-xs text-on-surface-variant/60 font-medium">/ hour</span>
                         </p>
                       </div>
-                      <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-2 sm:pt-0">
-                        <p className="text-[9px] sm:text-[10px] font-medium text-white/50 uppercase tracking-widest">Capacity</p>
-                        <p className="text-[10px] sm:text-xs font-semibold text-white">Up to 4 Players</p>
+                      <div className="text-left sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-outline-variant/20 pt-2 sm:pt-0">
+                        <p className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Capacity</p>
+                        <p className="text-[10px] sm:text-xs font-semibold text-on-surface">Up to 4 Players</p>
                       </div>
                     </div>
 
@@ -403,14 +400,14 @@ const Home = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleTableSelect(table)}
-                        className="w-full py-3 sm:py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10px] sm:text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center gap-2"
+                        className="w-full py-3 sm:py-4 bg-primary hover:bg-primary/90 text-white font-bold text-[10px] sm:text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center gap-2"
                       >
                         Reserve Table <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                       </motion.button>
                     ) : (
                       <button
                         disabled
-                        className="w-full py-3 sm:py-4 bg-white/5 text-white/30 font-medium text-[9px] sm:text-xs uppercase tracking-wider rounded-2xl cursor-not-allowed border border-white/10"
+                        className="w-full py-3 sm:py-4 bg-surface-container text-on-surface-variant/40 font-bold text-[9px] sm:text-xs uppercase tracking-wider rounded-2xl cursor-not-allowed border border-outline-variant/10"
                       >
                         {isOccupied ? 'Currently Occupied' : 'Under Maintenance'}
                       </button>

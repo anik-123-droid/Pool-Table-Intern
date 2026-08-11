@@ -258,7 +258,11 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       res.status(404).json({ message: 'User not found' });
     }
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+      res.status(400).json({ message: 'Email address is already in use by another account' });
+    } else {
+      res.status(500).json({ message: 'Failed to update profile. Please try again later.' });
+    }
   }
 };
 
