@@ -408,39 +408,42 @@ const TableManagement = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: Math.min(idx * 0.04, 0.4) }}
-                  className={`glass-card p-0 rounded-[32px] overflow-hidden border transition-all duration-300 flex flex-col justify-between group shadow-lg hover:shadow-xl min-h-[250px] ${
+                  className={`relative rounded-[32px] overflow-hidden border transition-all duration-300 flex flex-col justify-between group shadow-xl min-h-[250px] ${
                     isTimerActive && timers[table.id] <= 10 
                       ? 'border-red-500 ring-2 ring-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.4)] animate-pulse' 
                       : isAvailable 
-                      ? 'border-outline-variant/20 hover:border-primary/50'
+                      ? 'border-emerald-500/30 hover:border-emerald-500/70 bg-gradient-to-b from-[#14291b] to-[#0c1910] hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)]'
                       : isOccupied
-                      ? 'border-rose-500/30 bg-rose-500/5'
-                      : 'border-amber-500/30 bg-amber-500/5'
+                      ? 'border-rose-500/30 hover:border-rose-500/70 bg-gradient-to-b from-[#2a1317] to-[#170a0c]'
+                      : 'border-amber-500/30 hover:border-amber-500/70 bg-gradient-to-b from-[#261d10] to-[#140e08]'
                   }`}
                 >
                   {/* Top Billiard Mini Felt Visualizer Header */}
-                  <div className="relative p-4 sm:p-6 pb-3 sm:pb-5 bg-surface-container-low/60 border-b border-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 overflow-hidden">
+                  <div className="relative p-4 sm:p-6 pb-3 sm:pb-5 bg-[#112216] border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(#153e24_1px,transparent_1px)] [background-size:12px_12px] opacity-40 pointer-events-none" />
+
                     <div className="relative z-10">
                       <div className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full bg-amber-500 border border-amber-300 shadow-sm flex items-center justify-center text-[9px] font-bold text-black">8</span>
-                        <h3 className="text-xl sm:text-2xl font-bold text-on-surface uppercase tracking-tight">
+                        <span className="w-4 h-4 rounded-full bg-amber-400 border border-yellow-200 shadow-[0_0_8px_rgba(251,191,36,0.6)] flex items-center justify-center text-[9px] font-bold text-black">8</span>
+                        <h3 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight">
                           Table #<span className="font-sans">{table.tableNumber}</span>
                         </h3>
                       </div>
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary mt-1">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-primary/80 mt-1">
                         {table.size === '9ft' ? '9ft Pro Tournament' : table.size === '8ft' ? '8ft Standard' : '7ft Junior'}
                       </p>
                     </div>
 
                     <div className="relative z-10 self-end sm:self-auto">
+                      {/* isAvailable removed from Admin Table Manage view as requested */}
                       {isOccupied && (
-                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-600 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-rose-500" /> In Play
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(244,63,94,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-rose-400" /> In Play
                         </span>
                       )}
                       {isMaintenance && (
-                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-600 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" /> Maintenance
+                        <span className="px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
+                          <span className="w-2 h-2 rounded-full bg-amber-400" /> Maintenance
                         </span>
                       )}
                     </div>
@@ -448,30 +451,30 @@ const TableManagement = () => {
 
                   {/* Body Content */}
                   <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 relative z-10 flex-1 flex flex-col justify-center">
-                    <div className="bg-surface-container/60 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                    <div className="bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                       <div>
-                        <p className="text-[9px] sm:text-[10px] font-black text-on-surface-variant/70 uppercase tracking-widest">Hourly Rate</p>
+                        <p className="text-[9px] sm:text-[10px] font-medium text-white/50 uppercase tracking-widest">Hourly Rate</p>
                         <button
                           onClick={() => handleOpenPriceModal(table)}
-                          className="text-lg sm:text-xl font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group/price text-left"
+                          className="text-lg sm:text-xl font-bold text-primary hover:text-white transition-colors flex items-center gap-1 group/price text-left"
                           title="Click to edit rate"
                         >
-                          INR {table.basePricePerHour} <span className="text-xs font-normal text-on-surface-variant">/h</span>
+                          INR {table.basePricePerHour} <span className="text-xs font-normal text-white/60">/h</span>
                           <Edit2 className="w-4 h-4 opacity-0 group-hover/price:opacity-100 transition-opacity ml-1 text-primary" />
                         </button>
                       </div>
 
                       {isTimerActive ? (
-                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-sm">
+                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 bg-emerald-500/20 border border-emerald-400/50 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                           <div className="flex items-center gap-2">
-                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 animate-spin" style={{ animationDuration: '3s' }} />
-                            <span className={`text-xs sm:text-sm font-semibold tracking-wider ${timers[table.id] <= 10 ? 'text-red-500 animate-pulse' : 'text-emerald-600'}`}>
+                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+                            <span className={`text-xs sm:text-sm font-semibold tracking-wider ${timers[table.id] <= 10 ? 'text-red-400 animate-pulse' : 'text-primary'}`}>
                               {formatTime(timers[table.id])}
                             </span>
                           </div>
                           <button
                             onClick={() => handleClearTimer(table.id)}
-                            className="p-1 hover:bg-emerald-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-colors"
+                            className="p-1 hover:bg-white/10 rounded-full text-white/60 hover:text-red-400 transition-colors"
                             title="Clear Timer"
                           >
                             <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -480,7 +483,7 @@ const TableManagement = () => {
                       ) : (
                         <button
                           onClick={() => handleSetTimer(table)}
-                          className="w-full sm:w-auto justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center gap-2"
+                          className="w-full sm:w-auto justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-400/40 text-white/80 hover:text-primary text-[10px] sm:text-xs font-medium uppercase tracking-wider rounded-xl transition-all flex items-center gap-2"
                           title="Start timer"
                         >
                           <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" /> Set Timer
@@ -490,25 +493,25 @@ const TableManagement = () => {
                   </div>
 
                   {/* Actions Footer Bar */}
-                  <div className="p-3 sm:p-4 pt-2.5 sm:pt-3 bg-surface-container-low/40 border-t border-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 relative z-10">
+                  <div className="p-3 sm:p-4 pt-2.5 sm:pt-3 bg-black/60 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 relative z-10">
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <button
                         onClick={() => handleSetTimer(table)}
-                        className="p-2 rounded-xl text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors"
+                        className="p-2 rounded-xl text-white/70 hover:text-primary hover:bg-primary/10 transition-colors"
                         title="Set Countdown Timer"
                       >
                         <Clock className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleOpenPriceModal(table)}
-                        className="p-2 rounded-xl text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors"
+                        className="p-2 rounded-xl text-white/70 hover:text-primary hover:bg-primary/10 transition-colors"
                         title="Edit Rate"
                       >
                         <IndianRupee className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleToggleStatus(table)}
-                        className={`p-2 rounded-xl transition-colors ${table.status !== 'active' ? 'text-amber-600 bg-amber-500/20' : 'text-on-surface-variant hover:text-amber-600 hover:bg-amber-500/10'}`}
+                        className={`p-2 rounded-xl transition-colors ${table.status !== 'active' ? 'text-amber-400 bg-amber-500/20' : 'text-white/70 hover:text-amber-400 hover:bg-amber-500/10'}`}
                         title="Maintenance Options"
                       >
                         <Wrench className="w-4 h-4" />
@@ -518,14 +521,14 @@ const TableManagement = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { setEditingTable(table); setFormData(table); setShowModal(true); }}
-                        className="p-2 rounded-xl text-on-surface-variant hover:text-blue-600 hover:bg-blue-500/10 transition-colors"
+                        className="p-2 rounded-xl text-white/70 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
                         title="Edit Table"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(table.id)}
-                        className="p-2 rounded-xl text-on-surface-variant hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
+                        className="p-2 rounded-xl text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                         title="Delete Table"
                       >
                         <Trash2 className="w-4 h-4" />
