@@ -27,7 +27,6 @@ const TableManagement = () => {
   const [maintenanceModalTable, setMaintenanceModalTable] = useState(null);
   const [priceModalTable, setPriceModalTable] = useState(null);
   const [newHourlyRate, setNewHourlyRate] = useState('');
-  const [timers, setTimers] = useState({});
 
   const notifyRealtimeUpdate = () => {
     try {
@@ -69,116 +68,6 @@ const TableManagement = () => {
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
-
-  // Timer countdown background logic
-  useEffect(() => {
-    const loadTimers = () => {
-      try {
-        const stored = localStorage.getItem('poolTableTimers');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          const now = Date.now();
-          const activeTimers = {};
-          let changed = false;
-          
-          for (const id in parsed) {
-            if (parsed[id] > now) {
-              activeTimers[id] = Math.floor((parsed[id] - now) / 1000);
-            } else {
-              changed = true;
-            }
-          }
-          
-          if (changed) {
-            const updatedStorage = {};
-            for (const id in activeTimers) {
-              updatedStorage[id] = parsed[id];
-            }
-            localStorage.setItem('poolTableTimers', JSON.stringify(updatedStorage));
-          }
-          
-          setTimers(activeTimers);
-        }
-      } catch (e) {}
-    };
-    
-    loadTimers();
-
-    const interval = setInterval(() => {
-      try {
-        const stored = localStorage.getItem('poolTableTimers');
-        if (!stored) return;
-        
-        const parsed = JSON.parse(stored);
-        const now = Date.now();
-        const next = {};
-        let needsCleanup = false;
-        
-        for (const id in parsed) {
-          if (parsed[id] > now) {
-            next[id] = Math.floor((parsed[id] - now) / 1000);
-          } else {
-            needsCleanup = true;
-          }
-        }
-
-        if (needsCleanup) {
-          const updatedStorage = {};
-          for (const id in next) {
-            updatedStorage[id] = parsed[id];
-          }
-          localStorage.setItem('poolTableTimers', JSON.stringify(updatedStorage));
-        }
-
-        setTimers(next);
-      } catch (e) {}
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  const formatTime = (totalSeconds) => {
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const handleSetTimer = (table) => {
-    const mins = window.prompt(`Set countdown timer for Table ${table.tableNumber} (in minutes):`, '60');
-    if (mins !== null) {
-      const parsedMins = parseInt(mins, 10);
-      if (!isNaN(parsedMins) && parsedMins > 0) {
-        const endTime = Date.now() + (parsedMins * 60 * 1000);
-        try {
-          const stored = localStorage.getItem('poolTableTimers');
-          const parsed = stored ? JSON.parse(stored) : {};
-          parsed[table.id] = endTime;
-          localStorage.setItem('poolTableTimers', JSON.stringify(parsed));
-        } catch (err) {
-          console.error("Error saving timer", err);
-        }
-        setTimers(prev => ({ ...prev, [table.id]: parsedMins * 60 }));
-        addToast(`Timer set for Table ${table.tableNumber} (${parsedMins} min)`, 'success');
-      }
-    }
-  };
-
-  const handleClearTimer = (tableId) => {
-    try {
-      const stored = localStorage.getItem('poolTableTimers');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        delete parsed[tableId];
-        localStorage.setItem('poolTableTimers', JSON.stringify(parsed));
-      }
-    } catch (e) {}
-    setTimers(prev => {
-      const next = { ...prev };
-      delete next[tableId];
-      return next;
-    });
-    addToast('Timer stopped', 'info');
-  };
 
   const handleOpenPriceModal = (table) => {
     setPriceModalTable(table);
@@ -421,7 +310,6 @@ const TableManagement = () => {
           {/* Billiard Table Box Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 md:gap-6">
             {sortedTables.map((table, idx) => {
-              const isTimerActive = timers[table.id] !== undefined;
               const isOccupied = table.status === 'occupied';
               const isMaintenance = table.status === 'maintenance' || table.status === 'maintenance_scheduled';
               const isAvailable = !isOccupied && !isMaintenance;
@@ -433,9 +321,7 @@ const TableManagement = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: Math.min(idx * 0.04, 0.4) }}
                   className={`relative rounded-[32px] overflow-hidden border transition-all duration-300 flex flex-col justify-between group shadow-xl min-h-[250px] ${
-                    isTimerActive && timers[table.id] <= 10 
-                      ? 'border-red-500 ring-2 ring-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.4)] animate-pulse' 
-                      : isAvailable 
+                    isAvailable 
                       ? 'border-emerald-500/30 hover:border-emerald-500/70 bg-gradient-to-b from-[#14291b] to-[#0c1910] hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)]'
                       : isOccupied
                       ? 'border-rose-500/30 hover:border-rose-500/70 bg-gradient-to-b from-[#2a1317] to-[#170a0c]'
@@ -487,45 +373,12 @@ const TableManagement = () => {
                           <Edit2 className="w-4 h-4 opacity-0 group-hover/price:opacity-100 transition-opacity ml-1 text-primary" />
                         </button>
                       </div>
-
-                      {isTimerActive ? (
-                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 bg-emerald-500/20 border border-emerald-400/50 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary animate-spin" style={{ animationDuration: '3s' }} />
-                            <span className={`text-xs sm:text-sm font-semibold tracking-wider ${timers[table.id] <= 10 ? 'text-red-400 animate-pulse' : 'text-primary'}`}>
-                              {formatTime(timers[table.id])}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleClearTimer(table.id)}
-                            className="p-1 hover:bg-white/10 rounded-full text-white/60 hover:text-red-400 transition-colors"
-                            title="Clear Timer"
-                          >
-                            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleSetTimer(table)}
-                          className="w-full sm:w-auto justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-400/40 text-white/80 hover:text-primary text-[10px] sm:text-xs font-medium uppercase tracking-wider rounded-xl transition-all flex items-center gap-2"
-                          title="Start timer"
-                        >
-                          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" /> Set Timer
-                        </button>
-                      )}
                     </div>
                   </div>
 
                   {/* Actions Footer Bar */}
                   <div className="p-3 sm:p-4 pt-2.5 sm:pt-3 bg-black/60 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 relative z-10">
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <button
-                        onClick={() => handleSetTimer(table)}
-                        className="p-2 rounded-xl text-white/70 hover:text-primary hover:bg-primary/10 transition-colors"
-                        title="Set Countdown Timer"
-                      >
-                        <Clock className="w-4 h-4" />
-                      </button>
                       <button
                         onClick={() => handleOpenPriceModal(table)}
                         className="p-2 rounded-xl text-white/70 hover:text-primary hover:bg-primary/10 transition-colors"

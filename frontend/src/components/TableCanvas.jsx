@@ -42,8 +42,6 @@ const TableCanvas = ({ tables, onTableSelect, isAdmin = false, isEditing = false
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [draggingTableId, setDraggingTableId] = useState(null);
 
-  // Timers state: { tableId: remainingSeconds } for display
-  const [timers, setTimers] = useState({});
   const [extraItems, setExtraItems] = useState([]);
 
   useEffect(() => {
@@ -58,82 +56,6 @@ const TableCanvas = ({ tables, onTableSelect, isAdmin = false, isEditing = false
       ]);
     }
   }, []);
-
-  useEffect(() => {
-    // Load existing timers from localStorage
-    const loadTimers = () => {
-      try {
-        const stored = localStorage.getItem('poolTableTimers');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          const now = Date.now();
-          const activeTimers = {};
-          let changed = false;
-          
-          for (const id in parsed) {
-            if (parsed[id] > now) {
-              activeTimers[id] = Math.floor((parsed[id] - now) / 1000);
-            } else {
-              changed = true;
-            }
-          }
-          
-          if (changed) {
-            // Cleanup expired timers from storage
-            const updatedStorage = {};
-            for (const id in activeTimers) {
-              updatedStorage[id] = parsed[id];
-            }
-            localStorage.setItem('poolTableTimers', JSON.stringify(updatedStorage));
-          }
-          
-          setTimers(activeTimers);
-        }
-      } catch (e) {
-        console.error("Error loading timers", e);
-      }
-    };
-    
-    loadTimers();
-
-    const interval = setInterval(() => {
-      try {
-        const stored = localStorage.getItem('poolTableTimers');
-        if (!stored) return;
-        
-        const parsed = JSON.parse(stored);
-        const now = Date.now();
-        const next = {};
-        let needsCleanup = false;
-        
-        for (const id in parsed) {
-          if (parsed[id] > now) {
-            next[id] = Math.floor((parsed[id] - now) / 1000);
-          } else {
-            needsCleanup = true;
-          }
-        }
-
-        if (needsCleanup) {
-          const updatedStorage = {};
-          for (const id in next) {
-            updatedStorage[id] = parsed[id];
-          }
-          localStorage.setItem('poolTableTimers', JSON.stringify(updatedStorage));
-        }
-
-        setTimers(next);
-      } catch (e) {}
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  const formatTime = (totalSeconds) => {
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
 
   // Keep track of drag starting variables in mutable ref to prevent React stale state issues during fast movement
   const dragRef = useRef({
@@ -150,26 +72,7 @@ const TableCanvas = ({ tables, onTableSelect, isAdmin = false, isEditing = false
   const handleTableClick = (e, table) => {
     if (e.target.closest('.utility-btn')) return;
 
-    if (isAdmin) {
-      if (!isEditing) {
-        const mins = window.prompt(`Set timer for Table ${table.tableNumber} (in minutes):`, '60');
-        if (mins !== null) {
-          const parsedMins = parseInt(mins, 10);
-          if (!isNaN(parsedMins) && parsedMins > 0) {
-            const endTime = Date.now() + (parsedMins * 60 * 1000);
-            try {
-              const stored = localStorage.getItem('poolTableTimers');
-              const parsed = stored ? JSON.parse(stored) : {};
-              parsed[table.id] = endTime;
-              localStorage.setItem('poolTableTimers', JSON.stringify(parsed));
-            } catch (err) {
-              console.error("Error saving timer", err);
-            }
-            setTimers(prev => ({ ...prev, [table.id]: parsedMins * 60 }));
-          }
-        }
-      }
-    } else {
+    if (!isAdmin) {
       if (table.status !== 'maintenance' && table.status !== 'maintenance_scheduled' && table.status !== 'occupied') {
         if (onTableSelect) onTableSelect(table);
       }
